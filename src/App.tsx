@@ -11,6 +11,9 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import Discover from "./pages/Discover";
+import Applications from "./pages/Applications";
+import Matches from "./pages/Matches";
+import Profile from "./pages/Profile";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -40,26 +43,17 @@ const App = () => (
               } />
               <Route path="/applications" element={
                 <ProtectedRoute>
-                  <div className="p-8 text-center">
-                    <h1 className="text-2xl font-bold">Applications</h1>
-                    <p className="text-gray-600 mt-2">Coming soon...</p>
-                  </div>
+                  <Applications />
                 </ProtectedRoute>
               } />
               <Route path="/matches" element={
                 <ProtectedRoute>
-                  <div className="p-8 text-center">
-                    <h1 className="text-2xl font-bold">Matches</h1>
-                    <p className="text-gray-600 mt-2">Coming soon...</p>
-                  </div>
+                  <Matches />
                 </ProtectedRoute>
               } />
               <Route path="/profile" element={
                 <ProtectedRoute>
-                  <div className="p-8 text-center">
-                    <h1 className="text-2xl font-bold">Profile</h1>
-                    <p className="text-gray-600 mt-2">Coming soon...</p>
-                  </div>
+                  <Profile />
                 </ProtectedRoute>
               } />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
