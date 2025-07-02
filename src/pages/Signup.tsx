@@ -4,26 +4,50 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useUser } from "@/contexts/UserContext";
+import { toast } from "sonner";
 
 const Signup = () => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    companyName: "",
-    yourName: "",
+    fullName: "",
     email: "",
     password: "",
+    confirmPassword: "",
+    companyName: "",
     industry: "",
     companySize: "",
-    location: "",
-    grantInterests: [] as string[]
+    companyStage: "",
+    interests: [] as string[]
   });
+
+  const { signup } = useUser();
+  const navigate = useNavigate();
 
   const totalSteps = 3;
   const progress = (currentStep / totalSteps) * 100;
 
   const handleNext = () => {
+    // Validate current step
+    if (currentStep === 1) {
+      if (!formData.fullName || !formData.email || !formData.password || !formData.confirmPassword) {
+        toast.error("Please fill in all fields");
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        toast.error("Passwords don't match");
+        return;
+      }
+    } else if (currentStep === 2) {
+      if (!formData.companyName || !formData.industry || !formData.companySize || !formData.companyStage) {
+        toast.error("Please fill in all company information");
+        return;
+      }
+    }
+
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
     }
@@ -42,32 +66,39 @@ const Signup = () => {
   const handleInterestToggle = (interest: string) => {
     setFormData(prev => ({
       ...prev,
-      grantInterests: prev.grantInterests.includes(interest)
-        ? prev.grantInterests.filter(i => i !== interest)
-        : [...prev.grantInterests, interest]
+      interests: prev.interests.includes(interest)
+        ? prev.interests.filter(i => i !== interest)
+        : [...prev.interests, interest]
     }));
+  };
+
+  const handleSubmit = async () => {
+    if (formData.interests.length === 0) {
+      toast.error("Please select at least one grant interest");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await signup(formData);
+      toast.success("Account created successfully! Welcome to GrantSwipe!");
+      navigate("/dashboard");
+    } catch (error) {
+      toast.error("Failed to create account. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const renderStep1 = () => (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="companyName">Company Name</Label>
+        <Label htmlFor="fullName">Full Name</Label>
         <Input
-          id="companyName"
-          placeholder="Your company name"
-          value={formData.companyName}
-          onChange={(e) => handleInputChange("companyName", e.target.value)}
-          className="h-11"
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="yourName">Your Name</Label>
-        <Input
-          id="yourName"
+          id="fullName"
           placeholder="Your full name"
-          value={formData.yourName}
-          onChange={(e) => handleInputChange("yourName", e.target.value)}
+          value={formData.fullName}
+          onChange={(e) => handleInputChange("fullName", e.target.value)}
           className="h-11"
         />
       </div>
@@ -95,11 +126,34 @@ const Signup = () => {
           className="h-11"
         />
       </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="confirmPassword">Confirm Password</Label>
+        <Input
+          id="confirmPassword"
+          type="password"
+          placeholder="Confirm your password"
+          value={formData.confirmPassword}
+          onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+          className="h-11"
+        />
+      </div>
     </div>
   );
 
   const renderStep2 = () => (
     <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="companyName">Company Name</Label>
+        <Input
+          id="companyName"
+          placeholder="Your company name"
+          value={formData.companyName}
+          onChange={(e) => handleInputChange("companyName", e.target.value)}
+          className="h-11"
+        />
+      </div>
+      
       <div className="space-y-2">
         <Label htmlFor="industry">Industry</Label>
         <select
@@ -109,42 +163,58 @@ const Signup = () => {
           className="w-full h-11 px-3 py-2 border border-input bg-background rounded-md text-sm"
         >
           <option value="">Select your industry</option>
-          <option value="technology">Technology</option>
-          <option value="healthcare">Healthcare</option>
-          <option value="manufacturing">Manufacturing</option>
-          <option value="retail">Retail</option>
-          <option value="education">Education</option>
-          <option value="finance">Finance</option>
-          <option value="other">Other</option>
+          <option value="Technology">Technology</option>
+          <option value="Healthcare">Healthcare</option>
+          <option value="Manufacturing">Manufacturing</option>
+          <option value="Retail">Retail</option>
+          <option value="Professional Services">Professional Services</option>
+          <option value="Non-profit">Non-profit</option>
+          <option value="Education">Education</option>
+          <option value="Other">Other</option>
         </select>
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="companySize">Company Size</Label>
+        <Label>Company Size</Label>
+        <div className="space-y-2">
+          {[
+            "1-10 employees",
+            "11-50 employees", 
+            "51-200 employees",
+            "201-500 employees",
+            "500+ employees"
+          ].map((size) => (
+            <div key={size} className="flex items-center space-x-2">
+              <input
+                type="radio"
+                id={size}
+                name="companySize"
+                value={size}
+                checked={formData.companySize === size}
+                onChange={(e) => handleInputChange("companySize", e.target.value)}
+                className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+              />
+              <Label htmlFor={size} className="text-sm font-normal cursor-pointer">
+                {size}
+              </Label>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="companyStage">Company Stage</Label>
         <select
-          id="companySize"
-          value={formData.companySize}
-          onChange={(e) => handleInputChange("companySize", e.target.value)}
+          id="companyStage"
+          value={formData.companyStage}
+          onChange={(e) => handleInputChange("companyStage", e.target.value)}
           className="w-full h-11 px-3 py-2 border border-input bg-background rounded-md text-sm"
         >
-          <option value="">Select company size</option>
-          <option value="1-10">1-10 employees</option>
-          <option value="11-50">11-50 employees</option>
-          <option value="51-200">51-200 employees</option>
-          <option value="201-500">201-500 employees</option>
-          <option value="500+">500+ employees</option>
+          <option value="">Select company stage</option>
+          <option value="Startup (0-2 years)">Startup (0-2 years)</option>
+          <option value="Growth (3-5 years)">Growth (3-5 years)</option>
+          <option value="Established (5+ years)">Established (5+ years)</option>
         </select>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="location">Location</Label>
-        <Input
-          id="location"
-          placeholder="City, State/Country"
-          value={formData.location}
-          onChange={(e) => handleInputChange("location", e.target.value)}
-          className="h-11"
-        />
       </div>
     </div>
   );
@@ -154,11 +224,10 @@ const Signup = () => {
       "Research & Development",
       "Business Expansion",
       "Hiring & Training",
-      "Technology Innovation",
+      "Equipment & Technology",
       "Export Development",
-      "Environmental Initiatives",
-      "Small Business Support",
-      "Minority/Women-Owned Business"
+      "Sustainability/Green Initiatives",
+      "Innovation Projects"
     ];
 
     return (
@@ -166,7 +235,7 @@ const Signup = () => {
         <div>
           <Label className="text-base font-medium">Grant Interests</Label>
           <p className="text-sm text-slate-600 mb-4">
-            Select the types of grants you're most interested in (select all that apply):
+            Select the types of grants you're most interested in:
           </p>
         </div>
         
@@ -176,7 +245,7 @@ const Signup = () => {
               <input
                 type="checkbox"
                 id={interest}
-                checked={formData.grantInterests.includes(interest)}
+                checked={formData.interests.includes(interest)}
                 onChange={() => handleInterestToggle(interest)}
                 className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
               />
@@ -260,16 +329,19 @@ const Signup = () => {
                     variant="outline"
                     onClick={handlePrevious}
                     className="flex-1 h-11"
+                    disabled={isLoading}
                   >
                     Previous
                   </Button>
                 )}
                 
                 <Button
-                  onClick={currentStep === totalSteps ? () => console.log("Sign up!") : handleNext}
+                  onClick={currentStep === totalSteps ? handleSubmit : handleNext}
+                  disabled={isLoading}
                   className="flex-1 h-11 bg-blue-800 hover:bg-blue-900 text-white"
                 >
-                  {currentStep === totalSteps ? "Create Account" : "Continue"}
+                  {isLoading ? "Creating Account..." : 
+                   currentStep === totalSteps ? "Create Account" : "Continue"}
                 </Button>
               </div>
               
