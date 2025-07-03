@@ -63,13 +63,13 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           if (profile) {
             const userProfile: UserProfile = {
               id: profile.id,
-              name: profile.full_name || profile.email?.split('@')[0] || 'User',
+              name: profile.company_name || profile.email?.split('@')[0] || 'User',
               email: profile.email || session.user.email || '',
               company: {
                 name: profile.company_name || 'Your Company',
                 industry: profile.industry || 'Technology',
                 size: profile.business_size || '11-50 employees',
-                stage: profile.company_stage || 'Growth (3-5 years)',
+                stage: 'Growth (3-5 years)', // Default stage since it's not in the database
                 interests: profile.interests || ['Research & Development', 'Business Expansion']
               }
             };
@@ -111,11 +111,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       options: {
         emailRedirectTo: redirectUrl,
         data: {
-          full_name: userData.fullName,
           company_name: userData.companyName,
           industry: userData.industry,
           business_size: userData.companySize,
-          company_stage: userData.companyStage,
           interests: userData.interests
         }
       }
