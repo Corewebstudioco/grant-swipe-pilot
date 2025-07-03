@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bell, Search, Settings, User, TrendingUp, FileText, Target, Award } from "lucide-react";
@@ -10,8 +9,8 @@ const Dashboard = () => {
   const { user, logout } = useUser();
   const { matches } = useGrants();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
   };
 
   return (
@@ -88,10 +87,10 @@ const Dashboard = () => {
           <div className="max-w-6xl mx-auto">
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-slate-900 mb-2">
-                Welcome back, {user?.company.name}! 👋
+                Welcome back, {user?.name}! 👋
               </h1>
               <p className="text-slate-600">
-                Ready to discover your next grant opportunity?
+                Ready to discover your next grant opportunity for {user?.company.name}?
               </p>
             </div>
 

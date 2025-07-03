@@ -9,7 +9,274 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      applications: {
+        Row: {
+          ai_assistance_used: boolean | null
+          application_data: Json | null
+          created_at: string | null
+          grant_id: string | null
+          id: string
+          match_id: string | null
+          notes: string | null
+          status: string | null
+          submitted_at: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          ai_assistance_used?: boolean | null
+          application_data?: Json | null
+          created_at?: string | null
+          grant_id?: string | null
+          id?: string
+          match_id?: string | null
+          notes?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          ai_assistance_used?: boolean | null
+          application_data?: Json | null
+          created_at?: string | null
+          grant_id?: string | null
+          id?: string
+          match_id?: string | null
+          notes?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_grant_id_fkey"
+            columns: ["grant_id"]
+            isOneToOne: false
+            referencedRelation: "grants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grants: {
+        Row: {
+          agency: string | null
+          amount: string | null
+          application_url: string | null
+          business_size_requirements: string[] | null
+          category: string | null
+          created_at: string | null
+          deadline: string | null
+          description: string | null
+          eligibility: string | null
+          funding_type: string | null
+          id: string
+          industry_tags: string[] | null
+          location_restrictions: string[] | null
+          status: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          agency?: string | null
+          amount?: string | null
+          application_url?: string | null
+          business_size_requirements?: string[] | null
+          category?: string | null
+          created_at?: string | null
+          deadline?: string | null
+          description?: string | null
+          eligibility?: string | null
+          funding_type?: string | null
+          id?: string
+          industry_tags?: string[] | null
+          location_restrictions?: string[] | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          agency?: string | null
+          amount?: string | null
+          application_url?: string | null
+          business_size_requirements?: string[] | null
+          category?: string | null
+          created_at?: string | null
+          deadline?: string | null
+          description?: string | null
+          eligibility?: string | null
+          funding_type?: string | null
+          id?: string
+          industry_tags?: string[] | null
+          location_restrictions?: string[] | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      matches: {
+        Row: {
+          ai_reasons: string[] | null
+          application_tips: string[] | null
+          bookmarked: boolean | null
+          compatibility_score: number | null
+          created_at: string | null
+          eligibility_status: string | null
+          grant_id: string | null
+          id: string
+          missing_requirements: string[] | null
+          user_id: string | null
+          viewed: boolean | null
+        }
+        Insert: {
+          ai_reasons?: string[] | null
+          application_tips?: string[] | null
+          bookmarked?: boolean | null
+          compatibility_score?: number | null
+          created_at?: string | null
+          eligibility_status?: string | null
+          grant_id?: string | null
+          id?: string
+          missing_requirements?: string[] | null
+          user_id?: string | null
+          viewed?: boolean | null
+        }
+        Update: {
+          ai_reasons?: string[] | null
+          application_tips?: string[] | null
+          bookmarked?: boolean | null
+          compatibility_score?: number | null
+          created_at?: string | null
+          eligibility_status?: string | null
+          grant_id?: string | null
+          id?: string
+          missing_requirements?: string[] | null
+          user_id?: string | null
+          viewed?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matches_grant_id_fkey"
+            columns: ["grant_id"]
+            isOneToOne: false
+            referencedRelation: "grants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matches_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          business_size: string | null
+          company_name: string | null
+          created_at: string | null
+          description: string | null
+          email: string | null
+          funding_needs: string | null
+          id: string
+          industry: string | null
+          interests: string[] | null
+          location: string | null
+          previous_grants: string[] | null
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          business_size?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          description?: string | null
+          email?: string | null
+          funding_needs?: string | null
+          id: string
+          industry?: string | null
+          interests?: string[] | null
+          location?: string | null
+          previous_grants?: string[] | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          business_size?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          description?: string | null
+          email?: string | null
+          funding_needs?: string | null
+          id?: string
+          industry?: string | null
+          interests?: string[] | null
+          location?: string | null
+          previous_grants?: string[] | null
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
+      user_activity: {
+        Row: {
+          activity_type: string | null
+          created_at: string | null
+          grant_id: string | null
+          id: string
+          metadata: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          activity_type?: string | null
+          created_at?: string | null
+          grant_id?: string | null
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          activity_type?: string | null
+          created_at?: string | null
+          grant_id?: string | null
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_activity_grant_id_fkey"
+            columns: ["grant_id"]
+            isOneToOne: false
+            referencedRelation: "grants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_activity_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

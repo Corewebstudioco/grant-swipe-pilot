@@ -1,11 +1,10 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { toast } from "sonner";
 
@@ -24,8 +23,15 @@ const Signup = () => {
     interests: [] as string[]
   });
 
-  const { signup } = useUser();
+  const { signup, isAuthenticated } = useUser();
   const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, navigate]);
 
   const totalSteps = 3;
   const progress = (currentStep / totalSteps) * 100;
@@ -39,6 +45,10 @@ const Signup = () => {
       }
       if (formData.password !== formData.confirmPassword) {
         toast.error("Passwords don't match");
+        return;
+      }
+      if (formData.password.length < 6) {
+        toast.error("Password must be at least 6 characters");
         return;
       }
     } else if (currentStep === 2) {
@@ -80,11 +90,20 @@ const Signup = () => {
 
     setIsLoading(true);
     try {
-      await signup(formData);
-      toast.success("Account created successfully! Welcome to GrantSwipe!");
-      navigate("/dashboard");
+      const { error } = await signup(formData);
+      
+      if (error) {
+        if (error.message === 'User already registered') {
+          toast.error("An account with this email already exists");
+        } else {
+          toast.error(error.message || "Failed to create account");
+        }
+      } else {
+        toast.success("Account created successfully! Please check your email to verify your account.");
+        // Note: User will be redirected after email verification
+      }
     } catch (error) {
-      toast.error("Failed to create account. Please try again.");
+      toast.error("An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -120,7 +139,7 @@ const Signup = () => {
         <Input
           id="password"
           type="password"
-          placeholder="Create a strong password"
+          placeholder="Create a strong password (min 6 characters)"
           value={formData.password}
           onChange={(e) => handleInputChange("password", e.target.value)}
           className="h-11"

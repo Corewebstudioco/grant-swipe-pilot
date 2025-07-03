@@ -1,11 +1,10 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { toast } from "sonner";
 
@@ -14,8 +13,15 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useUser();
+  const { login, isAuthenticated } = useUser();
   const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,11 +33,20 @@ const Login = () => {
 
     setIsLoading(true);
     try {
-      await login(email, password);
-      toast.success("Welcome back!");
-      navigate("/dashboard");
+      const { error } = await login(email, password);
+      
+      if (error) {
+        if (error.message === 'Invalid login credentials') {
+          toast.error("Invalid email or password");
+        } else {
+          toast.error(error.message || "Failed to sign in");
+        }
+      } else {
+        toast.success("Welcome back!");
+        navigate("/dashboard");
+      }
     } catch (error) {
-      toast.error("Invalid email or password");
+      toast.error("An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }
