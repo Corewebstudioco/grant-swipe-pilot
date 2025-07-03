@@ -5,46 +5,26 @@ import { Badge } from "@/components/ui/badge";
 import { Bell, Search, User, X, Heart, Clock, DollarSign, Building, TrendingUp, FileText, Target, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
-import { useGrants } from "@/contexts/GrantContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { grantsApi, applicationsApi } from "@/utils/api";
+import type { GrantData } from "@/types/api";
 
 const Discover = () => {
   const { user, logout } = useUser();
-  const { getCurrentGrant, getRemainingCount, handleSwipe } = useGrants();
+  const [currentGrantIndex, setCurrentGrantIndex] = useState(0);
   const [showMatchModal, setShowMatchModal] = useState(false);
-  const [lastMatch, setLastMatch] = useState<any>(null);
+  const [lastMatch, setLastMatch] = useState<GrantData | null>(null);
 
-  const currentGrant = getCurrentGrant();
-  const remainingCount = getRemainingCount();
+  const { data: grantsData, isLoading } = useQuery({
+    queryKey: ['grants'],
+    queryFn: () => grantsApi.getAll(),
+  });
 
-  const handlePass = () => {
-    if (currentGrant) {
-      handleSwipe(currentGrant.id, false);
-      toast("Grant passed", { description: "We'll find you better matches!" });
-    }
-  };
-
-  const handleInterested = () => {
-    if (currentGrant) {
-      handleSwipe(currentGrant.id, true);
-      setLastMatch(currentGrant);
-      setShowMatchModal(true);
-    }
-  };
-
-  const getUrgencyColor = (urgency: string) => {
-    switch (urgency) {
-      case 'high':
-        return 'bg-red-100 text-red-800';
-      case 'medium':
-        return 'bg-orange-100 text-orange-800';
-      case 'low':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const grants = grantsData?.grants || [];
+  const currentGrant = grants[currentGrantIndex];
+  const remainingCount = grants.length - currentGrantIndex - 1;
 
   const formatDeadline = (deadline: string) => {
     const date = new Date(deadline);
@@ -58,9 +38,59 @@ const Discover = () => {
     return `${diffDays} days left`;
   };
 
+  const getUrgencyColor = (deadline: string) => {
+    const date = new Date(deadline);
+    const now = new Date();
+    const diffTime = date.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 7) return 'bg-red-100 text-red-800';
+    if (diffDays < 30) return 'bg-orange-100 text-orange-800';
+    return 'bg-green-100 text-green-800';
+  };
+
+  const handlePass = () => {
+    if (currentGrantIndex < grants.length - 1) {
+      setCurrentGrantIndex(prev => prev + 1);
+      toast("Grant passed", { description: "We'll find you better matches!" });
+    }
+  };
+
+  const handleInterested = async () => {
+    if (currentGrant) {
+      try {
+        // Create a draft application
+        await applicationsApi.create({
+          grantId: currentGrant.id,
+          formData: {},
+          notes: 'Marked as interested from discovery',
+          aiAssistanceUsed: false
+        });
+        
+        setLastMatch(currentGrant);
+        setShowMatchModal(true);
+        
+        if (currentGrantIndex < grants.length - 1) {
+          setCurrentGrantIndex(prev => prev + 1);
+        }
+      } catch (error) {
+        console.error('Error creating application:', error);
+        toast.error('Failed to save interest. Please try again.');
+      }
+    }
+  };
+
   const handleLogout = () => {
     logout();
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-800"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -141,7 +171,7 @@ const Discover = () => {
               </h1>
               <p className="text-slate-600">
                 {remainingCount > 0 
-                  ? `${remainingCount} more grants to review` 
+                  ? `${remainingCount + 1} grants to review` 
                   : "No more grants for now"}
               </p>
             </div>
@@ -151,12 +181,9 @@ const Discover = () => {
               <div className="flex flex-col items-center">
                 <Card className="w-full max-w-md shadow-xl border-0 mb-8">
                   <CardContent className="p-6">
-                    {/* Match Percentage Badge */}
-                    <div className="flex justify-between items-start mb-4">
-                      <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                        {currentGrant.matchPercentage}% Match
-                      </Badge>
-                      <Badge className={getUrgencyColor(currentGrant.urgency)}>
+                    {/* Deadline Badge */}
+                    <div className="flex justify-end items-start mb-4">
+                      <Badge className={getUrgencyColor(currentGrant.deadline)}>
                         <Clock className="w-3 h-3 mr-1" />
                         {formatDeadline(currentGrant.deadline)}
                       </Badge>
@@ -169,37 +196,38 @@ const Discover = () => {
                       </h2>
                       <div className="flex items-center gap-2 text-slate-600 mb-3">
                         <Building className="w-4 h-4" />
-                        <span className="text-sm">{currentGrant.organization}</span>
+                        <span className="text-sm">{currentGrant.agency}</span>
                       </div>
                     </div>
 
                     {/* Funding Amount */}
-                    <div className="bg-green-50 p-4 rounded-lg mb-4">
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="w-5 h-5 text-green-600" />
-                        <span className="text-2xl font-bold text-green-800">
-                          {currentGrant.amount}
-                        </span>
+                    {currentGrant.amount && (
+                      <div className="bg-green-50 p-4 rounded-lg mb-4">
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="w-5 h-5 text-green-600" />
+                          <span className="text-2xl font-bold text-green-800">
+                            {currentGrant.amount}
+                          </span>
+                        </div>
+                        <p className="text-sm text-green-600 mt-1">Funding Available</p>
                       </div>
-                      <p className="text-sm text-green-600 mt-1">Funding Available</p>
-                    </div>
+                    )}
 
-                    {/* Requirements */}
+                    {/* Description */}
                     <div className="mb-4">
-                      <h3 className="font-semibold text-slate-900 mb-2">Key Requirements:</h3>
-                      <ul className="space-y-1">
-                        {currentGrant.requirements.slice(0, 4).map((req, index) => (
-                          <li key={index} className="text-sm text-slate-600 flex items-start gap-2">
-                            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0"></span>
-                            {req}
-                          </li>
-                        ))}
-                      </ul>
+                      <p className="text-sm text-slate-600 line-clamp-4">
+                        {currentGrant.description}
+                      </p>
                     </div>
 
-                    {/* Tags */}
+                    {/* Category and Industry Tags */}
                     <div className="flex flex-wrap gap-2">
-                      {currentGrant.tags.map((tag, index) => (
+                      {currentGrant.category && (
+                        <Badge variant="secondary" className="text-xs">
+                          {currentGrant.category}
+                        </Badge>
+                      )}
+                      {currentGrant.industry_tags?.slice(0, 3).map((tag, index) => (
                         <Badge key={index} variant="secondary" className="text-xs">
                           {tag}
                         </Badge>
@@ -277,25 +305,23 @@ const Discover = () => {
                 You've shown interest in <strong>{lastMatch.title}</strong>
               </p>
               <div className="space-y-3">
-                <Button 
-                  className="w-full bg-blue-800 hover:bg-blue-900"
-                  onClick={() => {
-                    setShowMatchModal(false);
-                    toast.success("Great! We'll help you with the application process.");
-                  }}
-                >
-                  Apply Now
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => {
-                    setShowMatchModal(false);
-                    toast("Grant saved to your matches!");
-                  }}
-                >
-                  Save for Later
-                </Button>
+                <Link to="/applications">
+                  <Button 
+                    className="w-full bg-blue-800 hover:bg-blue-900"
+                    onClick={() => setShowMatchModal(false)}
+                  >
+                    View Applications
+                  </Button>
+                </Link>
+                <Link to="/matches">
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => setShowMatchModal(false)}
+                  >
+                    View All Matches
+                  </Button>
+                </Link>
                 <Button 
                   variant="ghost" 
                   className="w-full"

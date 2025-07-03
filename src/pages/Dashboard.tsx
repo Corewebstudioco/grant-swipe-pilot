@@ -1,17 +1,82 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bell, Search, Settings, User, TrendingUp, FileText, Target, Award } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
-import { useGrants } from "@/contexts/GrantContext";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
+import { useDashboardActivity } from "@/hooks/useDashboardActivity";
+import { useGrantMatching } from "@/hooks/useGrantMatching";
+import { useState, useEffect } from "react";
+import ProfileSetup from "@/components/ProfileSetup";
+import { profileApi } from "@/utils/api";
+import { toast } from "sonner";
 
 const Dashboard = () => {
   const { user, logout } = useUser();
-  const { matches } = useGrants();
+  const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
+  const [isCheckingProfile, setIsCheckingProfile] = useState(true);
+  
+  const { data: statsData, isLoading: statsLoading } = useDashboardStats();
+  const { data: activityData, isLoading: activityLoading } = useDashboardActivity();
+  const grantMatchingMutation = useGrantMatching();
+
+  // Check if user needs profile setup
+  useEffect(() => {
+    const checkProfile = async () => {
+      try {
+        const response = await profileApi.get();
+        if (response.error || !response.profile?.company_name) {
+          setNeedsProfileSetup(true);
+        }
+      } catch (error) {
+        console.error('Error checking profile:', error);
+        setNeedsProfileSetup(true);
+      } finally {
+        setIsCheckingProfile(false);
+      }
+    };
+
+    if (user) {
+      checkProfile();
+    }
+  }, [user]);
+
+  const handleStartSwiping = () => {
+    grantMatchingMutation.mutate();
+  };
 
   const handleLogout = async () => {
     await logout();
   };
+
+  const handleProfileSetupComplete = () => {
+    setNeedsProfileSetup(false);
+    toast.success('Welcome to GrantSwipe! Let\'s find some grants for you.');
+  };
+
+  // Show loading while checking profile
+  if (isCheckingProfile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-800"></div>
+      </div>
+    );
+  }
+
+  // Show profile setup if needed
+  if (needsProfileSetup) {
+    return <ProfileSetup onComplete={handleProfileSetupComplete} />;
+  }
+
+  const stats = statsData?.stats || {
+    activeApplications: { count: 0, change: '+0 this week' },
+    newMatches: { count: 0, change: 'Updated today' },
+    successRate: { percentage: 0, change: 'No data yet' },
+    totalApplied: { count: 0, change: 'All time' }
+  };
+
+  const activities = activityData?.activities || [];
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -104,8 +169,17 @@ const Dashboard = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-slate-900">3</div>
-                  <p className="text-xs text-green-600">+1 this week</p>
+                  {statsLoading ? (
+                    <div className="animate-pulse">
+                      <div className="h-8 bg-slate-200 rounded mb-2"></div>
+                      <div className="h-4 bg-slate-200 rounded w-2/3"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold text-slate-900">{stats.activeApplications.count}</div>
+                      <p className="text-xs text-green-600">{stats.activeApplications.change}</p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
               
@@ -117,8 +191,17 @@ const Dashboard = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-slate-900">{matches.length}</div>
-                  <p className="text-xs text-blue-600">Updated today</p>
+                  {statsLoading ? (
+                    <div className="animate-pulse">
+                      <div className="h-8 bg-slate-200 rounded mb-2"></div>
+                      <div className="h-4 bg-slate-200 rounded w-2/3"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold text-slate-900">{stats.newMatches.count}</div>
+                      <p className="text-xs text-blue-600">{stats.newMatches.change}</p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
               
@@ -130,8 +213,17 @@ const Dashboard = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-slate-900">85%</div>
-                  <p className="text-xs text-green-600">Above average</p>
+                  {statsLoading ? (
+                    <div className="animate-pulse">
+                      <div className="h-8 bg-slate-200 rounded mb-2"></div>
+                      <div className="h-4 bg-slate-200 rounded w-2/3"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold text-slate-900">{stats.successRate.percentage}%</div>
+                      <p className="text-xs text-green-600">{stats.successRate.change}</p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
@@ -143,8 +235,17 @@ const Dashboard = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-slate-900">12</div>
-                  <p className="text-xs text-slate-600">All time</p>
+                  {statsLoading ? (
+                    <div className="animate-pulse">
+                      <div className="h-8 bg-slate-200 rounded mb-2"></div>
+                      <div className="h-4 bg-slate-200 rounded w-2/3"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold text-slate-900">{stats.totalApplied.count}</div>
+                      <p className="text-xs text-slate-600">{stats.totalApplied.change}</p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -158,36 +259,38 @@ const Dashboard = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-900">New match: Small Business Innovation Grant</p>
-                        <p className="text-xs text-slate-600">2 hours ago</p>
-                      </div>
+                  {activityLoading ? (
+                    <div className="space-y-4">
+                      {[...Array(4)].map((_, i) => (
+                        <div key={i} className="animate-pulse flex items-start gap-3">
+                          <div className="w-2 h-2 bg-slate-200 rounded-full mt-2"></div>
+                          <div className="flex-1">
+                            <div className="h-4 bg-slate-200 rounded mb-1"></div>
+                            <div className="h-3 bg-slate-200 rounded w-1/3"></div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex items-start gap-3">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-900">Application submitted: Tech Development Fund</p>
-                        <p className="text-xs text-slate-600">1 day ago</p>
-                      </div>
+                  ) : activities.length > 0 ? (
+                    <div className="space-y-4">
+                      {activities.map((activity) => (
+                        <div key={activity.id} className="flex items-start gap-3">
+                          <div className={`w-2 h-2 rounded-full mt-2 ${
+                            activity.type === 'match' ? 'bg-green-500' :
+                            activity.type === 'application' ? 'bg-blue-500' :
+                            activity.type === 'reminder' ? 'bg-orange-500' :
+                            'bg-slate-500'
+                          }`}></div>
+                          <div>
+                            <p className="text-sm font-medium text-slate-900">{activity.description}</p>
+                            <p className="text-xs text-slate-600">{activity.timeAgo}</p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex items-start gap-3">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-900">Deadline reminder: Export Development Grant</p>
-                        <p className="text-xs text-slate-600">5 days remaining</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-900">Match found: Cybersecurity Innovation Fund</p>
-                        <p className="text-xs text-slate-600">1 week ago</p>
-                      </div>
-                    </div>
-                  </div>
+                  ) : (
+                    <p className="text-sm text-slate-600">No recent activity. Start exploring grants!</p>
+                  )}
                 </CardContent>
               </Card>
 
@@ -221,13 +324,22 @@ const Dashboard = () => {
                     Start Discovering Grants
                   </h3>
                   <p className="text-slate-600 mb-4">
-                    Swipe through grants tailored to your business profile and find your perfect match
+                    Use AI to find grants tailored to your business profile and get personalized matches
                   </p>
-                  <Link to="/discover">
-                    <Button className="bg-blue-800 hover:bg-blue-900 text-white">
-                      Start Swiping
+                  <div className="flex gap-3">
+                    <Button 
+                      className="bg-blue-800 hover:bg-blue-900 text-white"
+                      onClick={handleStartSwiping}
+                      disabled={grantMatchingMutation.isPending}
+                    >
+                      {grantMatchingMutation.isPending ? 'Finding Matches...' : 'Find Matches'}
                     </Button>
-                  </Link>
+                    <Link to="/discover">
+                      <Button variant="outline" className="border-blue-600 text-blue-700 hover:bg-blue-100">
+                        Start Swiping
+                      </Button>
+                    </Link>
+                  </div>
                 </CardContent>
               </Card>
               
