@@ -14,6 +14,8 @@ import Discover from "./pages/Discover";
 import Applications from "./pages/Applications";
 import Matches from "./pages/Matches";
 import Profile from "./pages/Profile";
+import AIGrantAnalyzer from "./components/AIGrantAnalyzer";
+import AIApplicationAssistant from "./components/AIApplicationAssistant";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -49,6 +51,16 @@ const App = () => (
               <Route path="/matches" element={
                 <ProtectedRoute>
                   <Matches />
+                </ProtectedRoute>
+              } />
+              <Route path="/ai-analyzer" element={
+                <ProtectedRoute>
+                  <AIGrantAnalyzer />
+                </ProtectedRoute>
+              } />
+              <Route path="/ai-assistant" element={
+                <ProtectedRoute>
+                  <AIApplicationAssistant />
                 </ProtectedRoute>
               } />
               <Route path="/profile" element={

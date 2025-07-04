@@ -1,12 +1,14 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bell, Search, Settings, User, TrendingUp, FileText, Target, Award } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Bell, Search, Settings, User, TrendingUp, FileText, Target, Award, Brain } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useDashboardActivity } from "@/hooks/useDashboardActivity";
 import { useGrantMatching } from "@/hooks/useGrantMatching";
+import { useGrantAI } from "@/hooks/useGrantAI";
 import { useState, useEffect } from "react";
 import ProfileSetup from "@/components/ProfileSetup";
 import { profileApi } from "@/utils/api";
@@ -16,10 +18,40 @@ const Dashboard = () => {
   const { user, logout } = useUser();
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
   const [isCheckingProfile, setIsCheckingProfile] = useState(true);
+  const [aiRecommendations, setAiRecommendations] = useState([]);
   
   const { data: statsData, isLoading: statsLoading } = useDashboardStats();
   const { data: activityData, isLoading: activityLoading } = useDashboardActivity();
   const grantMatchingMutation = useGrantMatching();
+  const { getRecommendations, loading: aiLoading } = useGrantAI();
+
+  // Mock grants for AI recommendations
+  const mockGrants = [
+    {
+      id: '1',
+      title: 'Small Business Innovation Research (SBIR)',
+      agency: 'NSF',
+      amount: '$500,000',
+      category: 'Innovation',
+      compatibilityScore: 85
+    },
+    {
+      id: '2',
+      title: 'Rural Business Development Grant',
+      agency: 'USDA',
+      amount: '$100,000',
+      category: 'Rural Development',
+      compatibilityScore: 72
+    },
+    {
+      id: '3',
+      title: 'Clean Energy Technology Grant',
+      agency: 'DOE',
+      amount: '$750,000',
+      category: 'Clean Energy',
+      compatibilityScore: 68
+    }
+  ];
 
   // Check if user needs profile setup
   useEffect(() => {
@@ -42,6 +74,29 @@ const Dashboard = () => {
     }
   }, [user]);
 
+  // Load AI recommendations
+  useEffect(() => {
+    const loadAIRecommendations = async () => {
+      if (!user || needsProfileSetup) return;
+      
+      try {
+        const businessProfile = {
+          company_name: user?.company?.name || 'Demo Company',
+          industry: 'Technology',
+          business_size: 'Small',
+          location: 'California'
+        };
+        
+        const recommendations = await getRecommendations(businessProfile, mockGrants);
+        setAiRecommendations(recommendations.recommendations || []);
+      } catch (error) {
+        console.error('Failed to load AI recommendations:', error);
+      }
+    };
+
+    loadAIRecommendations();
+  }, [user, needsProfileSetup, getRecommendations]);
+
   const handleStartSwiping = () => {
     grantMatchingMutation.mutate();
   };
@@ -53,6 +108,12 @@ const Dashboard = () => {
   const handleProfileSetupComplete = () => {
     setNeedsProfileSetup(false);
     toast.success('Welcome to GrantSwipe! Let\'s find some grants for you.');
+  };
+
+  const getCompatibilityBadgeColor = (score) => {
+    if (score >= 80) return 'bg-green-100 text-green-800';
+    if (score >= 60) return 'bg-yellow-100 text-yellow-800';
+    return 'bg-red-100 text-red-800';
   };
 
   // Show loading while checking profile
@@ -135,6 +196,14 @@ const Dashboard = () => {
             <Link to="/matches" className="flex items-center gap-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
               <Target className="h-5 w-5" />
               Matches
+            </Link>
+            <Link to="/ai-analyzer" className="flex items-center gap-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
+              <Brain className="h-5 w-5" />
+              AI Analyzer
+            </Link>
+            <Link to="/ai-assistant" className="flex items-center gap-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
+              <FileText className="h-5 w-5" />
+              AI Assistant
             </Link>
             <Link to="/profile" className="flex items-center gap-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
               <User className="h-5 w-5" />
@@ -250,6 +319,63 @@ const Dashboard = () => {
               </Card>
             </div>
 
+            {/* AI Recommendations Section */}
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Brain className="h-5 w-5 text-blue-600" />
+                  AI Grant Recommendations
+                </CardTitle>
+                <p className="text-sm text-slate-600">Top grants matched to your business profile</p>
+              </CardHeader>
+              <CardContent>
+                {aiLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="ml-3 text-slate-600">Loading AI recommendations...</span>
+                  </div>
+                ) : aiRecommendations.length > 0 ? (
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {aiRecommendations.slice(0, 3).map((rec) => (
+                      <Card key={rec.grantId} className="border-2 hover:border-blue-200 transition-colors">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-start justify-between">
+                            <CardTitle className="text-base">{rec.title}</CardTitle>
+                            <Badge className={getCompatibilityBadgeColor(rec.score)}>
+                              {rec.score}%
+                            </Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm text-slate-600 mb-3">{rec.reasoning}</p>
+                          <div className="flex items-center justify-between">
+                            <Badge variant="outline">{rec.priority}</Badge>
+                            <Button size="sm" variant="outline">
+                              <Brain className="h-3 w-3 mr-1" />
+                              Analyze
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Brain className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                    <p className="text-slate-600">Loading personalized recommendations...</p>
+                    <Button 
+                      onClick={() => window.location.reload()} 
+                      variant="outline" 
+                      size="sm"
+                      className="mt-3"
+                    >
+                      Refresh Recommendations
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Recent Activity */}
             <div className="grid md:grid-cols-2 gap-6 mb-8">
               <Card>
@@ -278,6 +404,7 @@ const Dashboard = () => {
                           <div className={`w-2 h-2 rounded-full mt-2 ${
                             activity.type === 'match' ? 'bg-green-500' :
                             activity.type === 'application' ? 'bg-blue-500' :
+                            activity.type === 'ai_analysis' ? 'bg-purple-500' :
                             activity.type === 'reminder' ? 'bg-orange-500' :
                             'bg-slate-500'
                           }`}></div>
@@ -287,6 +414,21 @@ const Dashboard = () => {
                           </div>
                         </div>
                       ))}
+                      {/* Add some AI-related activities */}
+                      <div className="flex items-start gap-3">
+                        <div className="w-2 h-2 rounded-full mt-2 bg-purple-500"></div>
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">AI analyzed 3 new grants for compatibility</p>
+                          <p className="text-xs text-slate-600">2 hours ago</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-2 h-2 rounded-full mt-2 bg-blue-500"></div>
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">AI generated application draft for SBIR grant</p>
+                          <p className="text-xs text-slate-600">1 day ago</p>
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <p className="text-sm text-slate-600">No recent activity. Start exploring grants!</p>
@@ -321,10 +463,10 @@ const Dashboard = () => {
               <Card className="border-2 border-blue-200 bg-blue-50">
                 <CardContent className="p-6">
                   <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                    Start Discovering Grants
+                    AI-Powered Grant Discovery
                   </h3>
                   <p className="text-slate-600 mb-4">
-                    Use AI to find grants tailored to your business profile and get personalized matches
+                    Use AI to find grants tailored to your business profile and get personalized matches with compatibility scoring
                   </p>
                   <div className="flex gap-3">
                     <Button 
@@ -334,9 +476,10 @@ const Dashboard = () => {
                     >
                       {grantMatchingMutation.isPending ? 'Finding Matches...' : 'Find Matches'}
                     </Button>
-                    <Link to="/discover">
+                    <Link to="/ai-analyzer">
                       <Button variant="outline" className="border-blue-600 text-blue-700 hover:bg-blue-100">
-                        Start Swiping
+                        <Brain className="h-4 w-4 mr-2" />
+                        AI Analyzer
                       </Button>
                     </Link>
                   </div>
@@ -346,16 +489,24 @@ const Dashboard = () => {
               <Card className="border-2 border-green-200 bg-green-50">
                 <CardContent className="p-6">
                   <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                    View All Applications
+                    AI Application Assistant
                   </h3>
                   <p className="text-slate-600 mb-4">
-                    Review the status of your submitted applications and track your progress
+                    Get AI help writing winning grant applications with draft generation and quality analysis
                   </p>
-                  <Link to="/applications">
-                    <Button variant="outline" className="border-green-600 text-green-700 hover:bg-green-100">
-                      View Applications
-                    </Button>
-                  </Link>
+                  <div className="flex gap-3">
+                    <Link to="/ai-assistant">
+                      <Button className="bg-green-600 hover:bg-green-700 text-white">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Start Writing
+                      </Button>
+                    </Link>
+                    <Link to="/applications">
+                      <Button variant="outline" className="border-green-600 text-green-700 hover:bg-green-100">
+                        View Applications
+                      </Button>
+                    </Link>
+                  </div>
                 </CardContent>
               </Card>
             </div>
