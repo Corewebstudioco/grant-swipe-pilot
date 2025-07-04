@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type {
   ProfileData,
@@ -161,6 +160,59 @@ export const dashboardApi = {
     const response = await fetch(`${API_BASE_URL}/dashboard-activity`, {
       method: 'GET',
       headers,
+    });
+    return response.json();
+  }
+};
+
+// AI API
+export const aiApi = {
+  async analyzeGrant(businessProfile: any, grantDetails: any): Promise<any> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/ai-analyze-grant`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ businessProfile, grantDetails }),
+    });
+    return response.json();
+  },
+
+  async getRecommendations(businessProfile: any, availableGrants: any[]): Promise<any> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/ai-recommendations`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ businessProfile, availableGrants }),
+    });
+    return response.json();
+  },
+
+  async getApplicationGuidance(grantDetails: any, businessProfile: any): Promise<any> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/ai-application-guidance`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ grantDetails, businessProfile }),
+    });
+    return response.json();
+  },
+
+  async generateApplicationDraft(grantDetails: any, businessProfile: any, section: string): Promise<any> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/ai-draft-application`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ grantDetails, businessProfile, section }),
+    });
+    return response.json();
+  },
+
+  async analyzeApplication(applicationData: any, grantRequirements: any): Promise<any> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/ai-analyze-application`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ applicationData, grantRequirements }),
     });
     return response.json();
   }
