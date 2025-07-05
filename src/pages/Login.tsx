@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,22 +32,36 @@ const Login = () => {
       return;
     }
 
+    if (!email.includes('@')) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
     setIsLoading(true);
     try {
+      console.log('Attempting login for:', email);
       const { error } = await login(email, password);
       
       if (error) {
-        if (error.message === 'Invalid login credentials') {
-          toast.error("Invalid email or password");
+        console.error('Login error:', error);
+        
+        // Handle specific error cases
+        if (error.code === 'auth/configuration-not-found') {
+          toast.error("Authentication service is temporarily unavailable. Please try again in a moment.");
+        } else if (error.code === 'auth/network-request-failed') {
+          toast.error("Network error. Please check your internet connection and try again.");
+        } else if (error.message) {
+          toast.error(error.message);
         } else {
-          toast.error(error.message || "Failed to sign in");
+          toast.error("Failed to sign in. Please try again.");
         }
       } else {
         toast.success("Welcome back!");
         navigate("/dashboard");
       }
     } catch (error) {
-      toast.error("An unexpected error occurred");
+      console.error('Unexpected login error:', error);
+      toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -87,6 +102,7 @@ const Login = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="h-11"
+                  disabled={isLoading}
                 />
               </div>
               
@@ -100,6 +116,7 @@ const Login = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   className="h-11"
+                  disabled={isLoading}
                 />
               </div>
               
@@ -109,6 +126,7 @@ const Login = () => {
                     id="remember"
                     checked={rememberMe}
                     onCheckedChange={(checked) => setRememberMe(!!checked)}
+                    disabled={isLoading}
                   />
                   <Label htmlFor="remember" className="text-sm text-slate-600">
                     Remember me
@@ -126,7 +144,7 @@ const Login = () => {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-11 bg-blue-800 hover:bg-blue-900 text-white"
+                className="w-full h-11 bg-blue-800 hover:bg-blue-900 text-white disabled:opacity-50"
               >
                 {isLoading ? "Signing In..." : "Sign In"}
               </Button>
@@ -142,7 +160,7 @@ const Login = () => {
             </div>
             
             <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" className="h-11">
+              <Button variant="outline" className="h-11" disabled={isLoading}>
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                   <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                   <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -152,7 +170,7 @@ const Login = () => {
                 Google
               </Button>
               
-              <Button variant="outline" className="h-11">
+              <Button variant="outline" className="h-11" disabled={isLoading}>
                 <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
                 </svg>

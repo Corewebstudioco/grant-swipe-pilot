@@ -8,13 +8,29 @@ export const useFirebaseAuth = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    let mounted = true;
+    
     const unsubscribe = onAuthChange((user) => {
-      setUser(user);
-      setLoading(false);
-      setError(null);
+      if (mounted) {
+        setUser(user);
+        setLoading(false);
+        setError(null);
+      }
     });
 
-    return () => unsubscribe();
+    // Handle case where onAuthChange returns an empty function (auth not initialized)
+    if (!unsubscribe || typeof unsubscribe !== 'function') {
+      if (mounted) {
+        setError('Firebase Auth is not properly initialized');
+        setLoading(false);
+      }
+      return () => {};
+    }
+
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
   }, []);
 
   return { user, loading, error, isAuthenticated: !!user };

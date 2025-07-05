@@ -42,7 +42,7 @@ export const useUser = () => {
 };
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const { user: firebaseUser, loading: authLoading } = useFirebaseAuth();
+  const { user: firebaseUser, loading: authLoading, error: authError } = useFirebaseAuth();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -110,30 +110,49 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     };
 
     if (!authLoading) {
-      loadUserProfile();
+      if (authError) {
+        console.error('Firebase Auth error:', authError);
+        setIsLoading(false);
+      } else {
+        loadUserProfile();
+      }
     }
-  }, [firebaseUser, authLoading]);
+  }, [firebaseUser, authLoading, authError]);
 
   const login = async (email: string, password: string) => {
-    const result = await signInUser(email, password);
-    return { error: result.success ? null : result.error };
+    try {
+      const result = await signInUser(email, password);
+      return { error: result.success ? null : result.error };
+    } catch (error) {
+      console.error('Login error in context:', error);
+      return { error: { message: 'An unexpected error occurred during login' } };
+    }
   };
 
   const signup = async (userData: any) => {
-    const result = await createUser(userData.email, userData.password, {
-      displayName: userData.fullName,
-      companyName: userData.companyName,
-      industry: userData.industry,
-      companySize: userData.companySize,
-      companyStage: userData.companyStage,
-      interests: userData.interests
-    });
-    return { error: result.success ? null : result.error };
+    try {
+      const result = await createUser(userData.email, userData.password, {
+        displayName: userData.fullName,
+        companyName: userData.companyName,
+        industry: userData.industry,
+        companySize: userData.companySize,
+        companyStage: userData.companyStage,
+        interests: userData.interests
+      });
+      return { error: result.success ? null : result.error };
+    } catch (error) {
+      console.error('Signup error in context:', error);
+      return { error: { message: 'An unexpected error occurred during signup' } };
+    }
   };
 
   const logout = async () => {
-    await signOutUser();
-    setUser(null);
+    try {
+      await signOutUser();
+      setUser(null);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const updateProfile = (data: Partial<UserProfile>) => {
