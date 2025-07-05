@@ -405,6 +405,7 @@ const Dashboard = () => {
                             activity.type === 'match' ? 'bg-green-500' :
                             activity.type === 'application' ? 'bg-blue-500' :
                             activity.type === 'ai_analysis' ? 'bg-purple-500' :
+                            activity.type === 'ai_assistance' ? 'bg-indigo-500' :
                             activity.type === 'reminder' ? 'bg-orange-500' :
                             'bg-slate-500'
                           }`}></div>

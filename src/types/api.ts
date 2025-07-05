@@ -1,4 +1,3 @@
-
 // API Response Types for GrantSwipe
 
 export interface ProfileData {
@@ -88,7 +87,7 @@ export interface ActivityItem {
   id: string;
   description: string;
   timeAgo: string;
-  type: 'match' | 'application' | 'reminder' | 'general';
+  type: 'match' | 'application' | 'reminder' | 'general' | 'ai_analysis' | 'ai_assistance';
 }
 
 // API Response Interfaces
