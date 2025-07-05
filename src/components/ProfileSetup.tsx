@@ -8,14 +8,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { profileApi } from '@/utils/api';
 import { Building, MapPin, Users, Target } from 'lucide-react';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
+import { addDocument } from '@/utils/firebase';
+import { useNavigate } from 'react-router-dom';
 
 interface ProfileSetupProps {
   onComplete: () => void;
 }
 
 const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
+  const { user } = useFirebaseAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     companyName: '',
     industry: '',
@@ -27,6 +31,7 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
     interests: [] as string[]
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const industries = [
     'Technology', 'Healthcare', 'Finance', 'Education', 'Manufacturing',
@@ -46,6 +51,33 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
     'Community Development', 'Cybersecurity', 'Digital Transformation'
   ];
 
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.companyName.trim()) {
+      newErrors.companyName = 'Company name is required';
+    }
+
+    if (!formData.industry) {
+      newErrors.industry = 'Industry is required';
+    }
+
+    if (!formData.businessSize) {
+      newErrors.businessSize = 'Business size is required';
+    }
+
+    if (formData.interests.length === 0) {
+      newErrors.interests = 'Please select at least one area of interest';
+    }
+
+    if (formData.website && !formData.website.startsWith('http')) {
+      newErrors.website = 'Website must start with http:// or https://';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleInterestChange = (interest: string, checked: boolean) => {
     setFormData(prev => ({
       ...prev,
@@ -53,23 +85,67 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
         ? [...prev.interests, interest]
         : prev.interests.filter(i => i !== interest)
     }));
+    
+    // Clear interest error if user selects at least one
+    if (checked && errors.interests) {
+      setErrors(prev => ({ ...prev, interests: '' }));
+    }
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear field error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      toast.error('Please fix the errors in the form');
+      return;
+    }
+
+    if (!user) {
+      toast.error('You must be logged in to create a profile');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const response = await profileApi.setup(formData);
-      if (response.error) {
-        throw new Error(response.error);
-      }
+      const profileData = {
+        userId: user.uid,
+        email: user.email,
+        companyName: formData.companyName,
+        industry: formData.industry,
+        businessSize: formData.businessSize,
+        location: formData.location || '',
+        website: formData.website || '',
+        description: formData.description || '',
+        fundingNeeds: formData.fundingNeeds || '',
+        interests: formData.interests,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      console.log('Saving profile data:', profileData);
+
+      const result = await addDocument('profiles', profileData);
       
-      toast.success('Profile created successfully!');
-      onComplete();
+      if (result.success) {
+        toast.success('Profile created successfully!');
+        onComplete();
+        navigate('/dashboard');
+      } else {
+        throw new Error(result.error || 'Failed to create profile');
+      }
     } catch (error) {
       console.error('Profile setup error:', error);
-      toast.error('Failed to create profile. Please try again.');
+      toast.error(error instanceof Error ? error.message : 'Failed to create profile. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -101,9 +177,13 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                   <Input
                     id="companyName"
                     value={formData.companyName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
+                    onChange={(e) => handleInputChange('companyName', e.target.value)}
+                    className={errors.companyName ? 'border-red-500' : ''}
                     required
                   />
+                  {errors.companyName && (
+                    <p className="text-sm text-red-500 mt-1">{errors.companyName}</p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="website">Website</Label>
@@ -111,17 +191,24 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                     id="website"
                     type="url"
                     value={formData.website}
-                    onChange={(e) => setFormData(prev => ({ ...prev, website: e.target.value }))}
+                    onChange={(e) => handleInputChange('website', e.target.value)}
                     placeholder="https://example.com"
+                    className={errors.website ? 'border-red-500' : ''}
                   />
+                  {errors.website && (
+                    <p className="text-sm text-red-500 mt-1">{errors.website}</p>
+                  )}
                 </div>
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="industry">Industry *</Label>
-                  <Select value={formData.industry} onValueChange={(value) => setFormData(prev => ({ ...prev, industry: value }))}>
-                    <SelectTrigger>
+                  <Select 
+                    value={formData.industry} 
+                    onValueChange={(value) => handleInputChange('industry', value)}
+                  >
+                    <SelectTrigger className={errors.industry ? 'border-red-500' : ''}>
                       <SelectValue placeholder="Select your industry" />
                     </SelectTrigger>
                     <SelectContent>
@@ -130,11 +217,17 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                       ))}
                     </SelectContent>
                   </Select>
+                  {errors.industry && (
+                    <p className="text-sm text-red-500 mt-1">{errors.industry}</p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="businessSize">Business Size *</Label>
-                  <Select value={formData.businessSize} onValueChange={(value) => setFormData(prev => ({ ...prev, businessSize: value }))}>
-                    <SelectTrigger>
+                  <Select 
+                    value={formData.businessSize} 
+                    onValueChange={(value) => handleInputChange('businessSize', value)}
+                  >
+                    <SelectTrigger className={errors.businessSize ? 'border-red-500' : ''}>
                       <SelectValue placeholder="Select business size" />
                     </SelectTrigger>
                     <SelectContent>
@@ -143,6 +236,9 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                       ))}
                     </SelectContent>
                   </Select>
+                  {errors.businessSize && (
+                    <p className="text-sm text-red-500 mt-1">{errors.businessSize}</p>
+                  )}
                 </div>
               </div>
 
@@ -153,7 +249,7 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                   <Input
                     id="location"
                     value={formData.location}
-                    onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                    onChange={(e) => handleInputChange('location', e.target.value)}
                     placeholder="City, State/Province, Country"
                     className="pl-10"
                   />
@@ -165,7 +261,7 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                 <Textarea
                   id="description"
                   value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
                   placeholder="Brief description of your business and what you do..."
                   rows={3}
                 />
@@ -184,7 +280,7 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                 <Textarea
                   id="fundingNeeds"
                   value={formData.fundingNeeds}
-                  onChange={(e) => setFormData(prev => ({ ...prev, fundingNeeds: e.target.value }))}
+                  onChange={(e) => handleInputChange('fundingNeeds', e.target.value)}
                   placeholder="What do you plan to use grant funding for? (e.g., equipment, research, expansion, etc.)"
                   rows={3}
                 />
@@ -195,7 +291,7 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-lg font-semibold">
                 <Users className="h-5 w-5" />
-                Areas of Interest
+                Areas of Interest *
               </div>
               <p className="text-sm text-slate-600">Select areas that match your business focus</p>
               
@@ -211,12 +307,15 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                   </div>
                 ))}
               </div>
+              {errors.interests && (
+                <p className="text-sm text-red-500">{errors.interests}</p>
+              )}
             </div>
 
             <Button 
               type="submit" 
               className="w-full bg-blue-800 hover:bg-blue-900"
-              disabled={isLoading || !formData.companyName || !formData.industry || !formData.businessSize}
+              disabled={isLoading}
             >
               {isLoading ? 'Creating Profile...' : 'Complete Setup'}
             </Button>

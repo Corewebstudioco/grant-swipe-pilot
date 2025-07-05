@@ -1,7 +1,9 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { User } from 'firebase/auth';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
+import { signInUser, signOutUser, createUser } from '@/utils/firebaseAuth';
+import { getDocument } from '@/utils/firebase';
 
 interface Company {
   name: string;
@@ -20,7 +22,7 @@ interface UserProfile {
 
 interface UserContextType {
   user: UserProfile | null;
-  session: Session | null;
+  firebaseUser: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ error: any }>;
@@ -40,92 +42,98 @@ export const useUser = () => {
 };
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
+  const { user: firebaseUser, loading: authLoading } = useFirebaseAuth();
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const isAuthenticated = !!session?.user;
+  const isAuthenticated = !!firebaseUser;
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        
-        if (session?.user) {
-          // Fetch user profile from our profiles table
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-
-          if (profile) {
+    const loadUserProfile = async () => {
+      if (firebaseUser) {
+        try {
+          // Try to get user profile from Firestore
+          const profileResult = await getDocument('profiles', firebaseUser.uid);
+          
+          if (profileResult.success && profileResult.data) {
+            const profileData = profileResult.data;
             const userProfile: UserProfile = {
-              id: profile.id,
-              name: profile.company_name || profile.email?.split('@')[0] || 'User',
-              email: profile.email || session.user.email || '',
+              id: firebaseUser.uid,
+              name: profileData.companyName || firebaseUser.displayName || 'User',
+              email: firebaseUser.email || '',
               company: {
-                name: profile.company_name || 'Your Company',
-                industry: profile.industry || 'Technology',
-                size: profile.business_size || '11-50 employees',
-                stage: 'Growth (3-5 years)', // Default stage since it's not in the database
-                interests: profile.interests || ['Research & Development', 'Business Expansion']
+                name: profileData.companyName || 'Your Company',
+                industry: profileData.industry || 'Technology',
+                size: profileData.businessSize || '11-50 employees',
+                stage: profileData.companyStage || 'Growth (3-5 years)',
+                interests: profileData.interests || ['Research & Development', 'Business Expansion']
               }
             };
             setUser(userProfile);
+          } else {
+            // No profile found, create basic user profile
+            const basicProfile: UserProfile = {
+              id: firebaseUser.uid,
+              name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+              email: firebaseUser.email || '',
+              company: {
+                name: 'Your Company',
+                industry: 'Technology',
+                size: '11-50 employees',
+                stage: 'Growth (3-5 years)',
+                interests: ['Research & Development', 'Business Expansion']
+              }
+            };
+            setUser(basicProfile);
           }
-        } else {
-          setUser(null);
+        } catch (error) {
+          console.error('Error loading user profile:', error);
+          // Set basic profile even if there's an error
+          const basicProfile: UserProfile = {
+            id: firebaseUser.uid,
+            name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+            email: firebaseUser.email || '',
+            company: {
+              name: 'Your Company',
+              industry: 'Technology',
+              size: '11-50 employees',
+              stage: 'Growth (3-5 years)',
+              interests: ['Research & Development', 'Business Expansion']
+            }
+          };
+          setUser(basicProfile);
         }
-        
-        setIsLoading(false);
+      } else {
+        setUser(null);
       }
-    );
+      setIsLoading(false);
+    };
 
-    // Get current session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (!session) {
-        setIsLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+    if (!authLoading) {
+      loadUserProfile();
+    }
+  }, [firebaseUser, authLoading]);
 
   const login = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
+    const result = await signInUser(email, password);
+    return { error: result.success ? null : result.error };
   };
 
   const signup = async (userData: any) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email: userData.email,
-      password: userData.password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          company_name: userData.companyName,
-          industry: userData.industry,
-          business_size: userData.companySize,
-          interests: userData.interests
-        }
-      }
+    const result = await createUser(userData.email, userData.password, {
+      displayName: userData.fullName,
+      companyName: userData.companyName,
+      industry: userData.industry,
+      companySize: userData.companySize,
+      companyStage: userData.companyStage,
+      interests: userData.interests
     });
-    
-    return { error };
+    return { error: result.success ? null : result.error };
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    await signOutUser();
     setUser(null);
-    setSession(null);
   };
 
   const updateProfile = (data: Partial<UserProfile>) => {
@@ -137,9 +145,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   return (
     <UserContext.Provider value={{
       user,
-      session,
+      firebaseUser,
       isAuthenticated,
-      isLoading,
+      isLoading: authLoading || isLoading,
       login,
       signup,
       logout,

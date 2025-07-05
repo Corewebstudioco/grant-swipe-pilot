@@ -6,7 +6,7 @@ import { useGrantMatching } from "@/hooks/useGrantMatching";
 import { useGrantAI } from "@/hooks/useGrantAI";
 import { useState, useEffect } from "react";
 import ProfileSetup from "@/components/ProfileSetup";
-import { profileApi } from "@/utils/api";
+import { getDocument } from "@/utils/firebase";
 import { toast } from "sonner";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
@@ -17,7 +17,7 @@ import DashboardInterests from "@/components/dashboard/DashboardInterests";
 import DashboardQuickActions from "@/components/dashboard/DashboardQuickActions";
 
 const Dashboard = () => {
-  const { user, logout } = useUser();
+  const { user, firebaseUser, logout } = useUser();
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
   const [isCheckingProfile, setIsCheckingProfile] = useState(true);
   const [aiRecommendations, setAiRecommendations] = useState([]);
@@ -58,10 +58,21 @@ const Dashboard = () => {
   // Check if user needs profile setup
   useEffect(() => {
     const checkProfile = async () => {
+      if (!firebaseUser) {
+        setIsCheckingProfile(false);
+        return;
+      }
+
       try {
-        const response = await profileApi.get();
-        if (response.error || !response.profile?.company_name) {
+        console.log('Checking profile for user:', firebaseUser.uid);
+        const response = await getDocument('profiles', firebaseUser.uid);
+        
+        if (!response.success || !response.data?.companyName) {
+          console.log('Profile setup needed');
           setNeedsProfileSetup(true);
+        } else {
+          console.log('Profile found:', response.data);
+          setNeedsProfileSetup(false);
         }
       } catch (error) {
         console.error('Error checking profile:', error);
@@ -71,10 +82,8 @@ const Dashboard = () => {
       }
     };
 
-    if (user) {
-      checkProfile();
-    }
-  }, [user]);
+    checkProfile();
+  }, [firebaseUser]);
 
   // Load AI recommendations
   useEffect(() => {

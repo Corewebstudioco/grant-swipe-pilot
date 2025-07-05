@@ -5,8 +5,9 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { useUser } from "@/contexts/UserContext";
 import { toast } from "sonner";
+import { createUser } from "@/utils/firebaseAuth";
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 
 const Signup = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -23,7 +24,7 @@ const Signup = () => {
     interests: [] as string[]
   });
 
-  const { signup, isAuthenticated } = useUser();
+  const { user, isAuthenticated } = useFirebaseAuth();
   const navigate = useNavigate();
 
   // Redirect if already authenticated
@@ -90,19 +91,31 @@ const Signup = () => {
 
     setIsLoading(true);
     try {
-      const { error } = await signup(formData);
+      const userData = {
+        displayName: formData.fullName,
+        companyName: formData.companyName,
+        industry: formData.industry,
+        companySize: formData.companySize,
+        companyStage: formData.companyStage,
+        interests: formData.interests
+      };
+
+      console.log('Creating user with data:', userData);
+
+      const result = await createUser(formData.email, formData.password, userData);
       
-      if (error) {
-        if (error.message === 'User already registered') {
+      if (result.success) {
+        toast.success("Account created successfully! Welcome to GrantSwipe!");
+        // The useEffect hook will handle the redirect when authentication state changes
+      } else {
+        if (result.error?.includes('auth/email-already-in-use')) {
           toast.error("An account with this email already exists");
         } else {
-          toast.error(error.message || "Failed to create account");
+          toast.error(result.error || "Failed to create account");
         }
-      } else {
-        toast.success("Account created successfully! Please check your email to verify your account.");
-        // Note: User will be redirected after email verification
       }
     } catch (error) {
+      console.error('Signup error:', error);
       toast.error("An unexpected error occurred");
     } finally {
       setIsLoading(false);
