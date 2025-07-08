@@ -266,12 +266,10 @@ export const dashboardApi = {
       return {
         success: false,
         data: {
-          totalApplications: 0,
-          pendingApplications: 0,
-          approvedApplications: 0,
-          totalMatches: 0,
-          viewedMatches: 0,
-          bookmarkedMatches: 0
+          activeApplications: { count: 0, change: '+0 this week' },
+          newMatches: { count: 0, change: 'Updated today' },
+          successRate: { percentage: 0, change: 'No data yet' },
+          totalApplied: { count: 0, change: 'All time' }
         },
         error: error instanceof Error ? error.message : 'Failed to load dashboard stats'
       };

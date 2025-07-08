@@ -17,7 +17,7 @@ import DashboardInterests from "@/components/dashboard/DashboardInterests";
 import DashboardQuickActions from "@/components/dashboard/DashboardQuickActions";
 
 const Dashboard = () => {
-  const { user, firebaseUser, logout } = useUser();
+  const { user, session, logout } = useUser();
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
   const [isCheckingProfile, setIsCheckingProfile] = useState(true);
   const [aiRecommendations, setAiRecommendations] = useState([]);
@@ -58,14 +58,14 @@ const Dashboard = () => {
   // Check if user needs profile setup
   useEffect(() => {
     const checkProfile = async () => {
-      if (!firebaseUser) {
+      if (!session?.user) {
         setIsCheckingProfile(false);
         return;
       }
 
       try {
-        console.log('Checking profile for user:', firebaseUser.uid);
-        const response = await getDocument('profiles', firebaseUser.uid);
+        console.log('Checking profile for user:', session.user.id);
+        const response = await getDocument('profiles', session.user.id);
         
         if (!response.success || !response.data?.companyName) {
           console.log('Profile setup needed');
@@ -83,7 +83,7 @@ const Dashboard = () => {
     };
 
     checkProfile();
-  }, [firebaseUser]);
+  }, [session?.user]);
 
   // Load AI recommendations
   useEffect(() => {
