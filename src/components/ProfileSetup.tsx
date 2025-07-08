@@ -10,17 +10,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Building, MapPin, Users, Target, CheckCircle } from 'lucide-react';
-import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
-import { addDocument } from '@/utils/firebase';
+import { Building, MapPin, Users, Target, CheckCircle, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { profileApi } from '@/utils/api';
 
 interface ProfileSetupProps {
   onComplete: () => void;
 }
 
 const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
-  const { user, loading: authLoading } = useFirebaseAuth();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     companyName: '',
@@ -33,9 +32,23 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
     interests: [] as string[]
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitTimeout, setSubmitTimeout] = useState<NodeJS.Timeout | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  // Check online status
+  React.useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const industries = [
     'Technology', 'Healthcare', 'Finance', 'Education', 'Manufacturing',
@@ -90,7 +103,6 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
         : prev.interests.filter(i => i !== interest)
     }));
     
-    // Clear interest error if user selects at least one
     if (checked && errors.interests) {
       setErrors(prev => ({ ...prev, interests: '' }));
     }
@@ -99,7 +111,6 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
-    // Clear field error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -108,36 +119,34 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (isOffline) {
+      toast.error('You are offline. Please check your internet connection and try again.');
+      return;
+    }
+    
     if (!validateForm()) {
       toast.error('Please fix the errors in the form');
       return;
     }
 
-    if (!user) {
-      toast.error('You must be logged in to create a profile');
+    if (isSubmitting) {
       return;
     }
 
-    if (isSubmitting) {
-      return; // Prevent double submission
-    }
-
     setIsSubmitting(true);
-    console.log('Starting profile creation for user:', user.uid);
-
-    // Set a timeout for long-running requests
-    const timeoutId = setTimeout(() => {
-      toast.error("Profile creation is taking longer than expected. Please check your connection.");
-      setIsSubmitting(false);
-    }, 15000);
-    
-    setSubmitTimeout(timeoutId);
+    console.log('Starting profile creation with Supabase');
 
     try {
       const startTime = Date.now();
+      
+      // Check auth status first
+      const { data: { session }, error: authError } = await supabase.auth.getSession();
+      
+      if (authError || !session) {
+        throw new Error('Authentication expired. Please refresh and login again.');
+      }
+
       const profileData = {
-        userId: user.uid,
-        email: user.email,
         companyName: formData.companyName,
         industry: formData.industry,
         businessSize: formData.businessSize,
@@ -146,23 +155,20 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
         description: formData.description || '',
         fundingNeeds: formData.fundingNeeds || '',
         interests: formData.interests,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
       };
 
-      console.log('Saving profile data:', profileData);
+      console.log('Saving profile data to Supabase:', profileData);
 
-      const result = await addDocument('profiles', profileData);
+      const result = await profileApi.setup(profileData);
       const duration = Date.now() - startTime;
       
       console.log(`Profile creation completed in ${duration}ms`);
       
       if (result.success) {
-        console.log('Profile created successfully, showing success state');
+        console.log('Profile created successfully');
         setShowSuccess(true);
         toast.success('Profile created successfully!');
         
-        // Show success state briefly before navigating
         setTimeout(() => {
           onComplete();
           navigate('/dashboard');
@@ -172,13 +178,27 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
       }
     } catch (error) {
       console.error('Profile setup error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to create profile. Please try again.';
+      
+      let errorMessage = 'Failed to create profile. Please try again.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('timeout')) {
+          errorMessage = 'Request timeout. Please check your connection and try again.';
+        } else if (error.message.includes('Authentication expired')) {
+          errorMessage = error.message;
+          // Redirect to login after a delay
+          setTimeout(() => {
+            navigate('/login');
+          }, 2000);
+        } else if (error.message.includes('offline') || error.message.includes('network')) {
+          errorMessage = 'Network error. Please check your internet connection.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast.error(errorMessage);
     } finally {
-      if (submitTimeout) {
-        clearTimeout(submitTimeout);
-        setSubmitTimeout(null);
-      }
       if (!showSuccess) {
         setIsSubmitting(false);
       }
@@ -189,33 +209,6 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
     console.log('Retrying profile creation');
     handleSubmit(new Event('submit') as any);
   };
-
-  // Show loading skeleton while auth is loading
-  if (authLoading || !user) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-        <Card className="w-full max-w-2xl">
-          <CardHeader>
-            <Skeleton className="h-8 w-3/4 mx-auto" />
-            <Skeleton className="h-4 w-2/3 mx-auto mt-2" />
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-4">
-              <Skeleton className="h-6 w-48" />
-              <div className="grid md:grid-cols-2 gap-4">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   // Show success state
   if (showSuccess) {
@@ -247,6 +240,13 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
           <p className="text-slate-600 text-center">
             Let's set up your business profile to find the perfect grants for you
           </p>
+          
+          {isOffline && (
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg p-3 text-red-700">
+              <AlertCircle className="h-4 w-4" />
+              <span className="text-sm">You are offline. Please check your connection.</span>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -265,7 +265,7 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                     value={formData.companyName}
                     onChange={(e) => handleInputChange('companyName', e.target.value)}
                     className={errors.companyName ? 'border-red-500' : ''}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isOffline}
                     required
                   />
                   {errors.companyName && (
@@ -281,7 +281,7 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                     onChange={(e) => handleInputChange('website', e.target.value)}
                     placeholder="https://example.com"
                     className={errors.website ? 'border-red-500' : ''}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isOffline}
                   />
                   {errors.website && (
                     <p className="text-sm text-red-500 mt-1">{errors.website}</p>
@@ -295,7 +295,7 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                   <Select 
                     value={formData.industry} 
                     onValueChange={(value) => handleInputChange('industry', value)}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isOffline}
                   >
                     <SelectTrigger className={errors.industry ? 'border-red-500' : ''}>
                       <SelectValue placeholder="Select your industry" />
@@ -315,7 +315,7 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                   <Select 
                     value={formData.businessSize} 
                     onValueChange={(value) => handleInputChange('businessSize', value)}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isOffline}
                   >
                     <SelectTrigger className={errors.businessSize ? 'border-red-500' : ''}>
                       <SelectValue placeholder="Select business size" />
@@ -342,7 +342,7 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                     onChange={(e) => handleInputChange('location', e.target.value)}
                     placeholder="City, State/Province, Country"
                     className="pl-10"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isOffline}
                   />
                 </div>
               </div>
@@ -355,7 +355,7 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                   onChange={(e) => handleInputChange('description', e.target.value)}
                   placeholder="Brief description of your business and what you do..."
                   rows={3}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isOffline}
                 />
               </div>
             </div>
@@ -375,7 +375,7 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                   onChange={(e) => handleInputChange('fundingNeeds', e.target.value)}
                   placeholder="What do you plan to use grant funding for? (e.g., equipment, research, expansion, etc.)"
                   rows={3}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isOffline}
                 />
               </div>
             </div>
@@ -395,7 +395,7 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                       id={interest}
                       checked={formData.interests.includes(interest)}
                       onCheckedChange={(checked) => handleInterestChange(interest, checked as boolean)}
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || isOffline}
                     />
                     <Label htmlFor={interest} className="text-sm font-normal">{interest}</Label>
                   </div>
@@ -410,7 +410,7 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
               <Button 
                 type="submit" 
                 className="w-full bg-blue-800 hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isOffline}
               >
                 {isSubmitting ? (
                   <LoadingSpinner size="sm" text="Creating Profile..." />
@@ -427,6 +427,7 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                     size="sm"
                     onClick={handleRetry}
                     className="text-blue-600 hover:text-blue-800"
+                    disabled={isOffline}
                   >
                     Taking too long? Click to retry
                   </Button>
