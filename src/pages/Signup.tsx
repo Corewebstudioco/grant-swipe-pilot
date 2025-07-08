@@ -3,8 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Link, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { createUser } from "@/utils/firebaseAuth";
 import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
@@ -12,6 +13,7 @@ import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
 const Signup = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [signupTimeout, setSignupTimeout] = useState<NodeJS.Timeout | null>(null);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -34,14 +36,45 @@ const Signup = () => {
     }
   }, [isAuthenticated, navigate]);
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (signupTimeout) {
+        clearTimeout(signupTimeout);
+      }
+    };
+  }, [signupTimeout]);
+
   const totalSteps = 3;
   const progress = (currentStep / totalSteps) * 100;
+
+  // Validate current step
+  const canProceed = useMemo(() => {
+    if (currentStep === 1) {
+      return formData.fullName && 
+             formData.email.includes('@') && 
+             formData.password.length >= 6 && 
+             formData.password === formData.confirmPassword;
+    } else if (currentStep === 2) {
+      return formData.companyName && 
+             formData.industry && 
+             formData.companySize && 
+             formData.companyStage;
+    } else if (currentStep === 3) {
+      return formData.interests.length > 0;
+    }
+    return false;
+  }, [currentStep, formData]);
 
   const handleNext = () => {
     // Validate current step
     if (currentStep === 1) {
       if (!formData.fullName || !formData.email || !formData.password || !formData.confirmPassword) {
         toast.error("Please fill in all fields");
+        return;
+      }
+      if (!formData.email.includes('@')) {
+        toast.error("Please enter a valid email address");
         return;
       }
       if (formData.password !== formData.confirmPassword) {
@@ -89,8 +122,23 @@ const Signup = () => {
       return;
     }
 
+    if (isLoading) {
+      return; // Prevent double submission
+    }
+
     setIsLoading(true);
+    console.log('Starting signup process for:', formData.email);
+
+    // Set a timeout for long-running requests
+    const timeoutId = setTimeout(() => {
+      toast.error("Signup is taking longer than expected. Please check your connection.");
+      setIsLoading(false);
+    }, 20000); // 20 second timeout for signup
+    
+    setSignupTimeout(timeoutId);
+
     try {
+      const startTime = Date.now();
       const userData = {
         displayName: formData.fullName,
         companyName: formData.companyName,
@@ -103,23 +151,44 @@ const Signup = () => {
       console.log('Creating user with data:', userData);
 
       const result = await createUser(formData.email, formData.password, userData);
+      const duration = Date.now() - startTime;
+      
+      console.log(`Signup attempt completed in ${duration}ms`);
       
       if (result.success) {
+        console.log('Account created successfully');
         toast.success("Account created successfully! Welcome to GrantSwipe!");
         // The useEffect hook will handle the redirect when authentication state changes
       } else {
-        if (result.error?.includes('auth/email-already-in-use')) {
+        console.error('Signup error:', result.error);
+        
+        if (result.error?.code === 'auth/email-already-in-use') {
           toast.error("An account with this email already exists");
+        } else if (result.error?.code === 'auth/weak-password') {
+          toast.error("Password is too weak. Please choose a stronger password.");
+        } else if (result.error?.code === 'auth/network-request-failed') {
+          toast.error("Network error. Please check your internet connection.");
+        } else if (result.error?.message) {
+          toast.error(result.error.message);
         } else {
-          toast.error(result.error || "Failed to create account");
+          toast.error("Failed to create account. Please try again.");
         }
       }
     } catch (error) {
-      console.error('Signup error:', error);
-      toast.error("An unexpected error occurred");
+      console.error('Unexpected signup error:', error);
+      toast.error("An unexpected error occurred. Please try again.");
     } finally {
+      if (signupTimeout) {
+        clearTimeout(signupTimeout);
+        setSignupTimeout(null);
+      }
       setIsLoading(false);
     }
+  };
+
+  const handleRetry = () => {
+    console.log('Retrying signup');
+    handleSubmit();
   };
 
   const renderStep1 = () => (
@@ -132,6 +201,8 @@ const Signup = () => {
           value={formData.fullName}
           onChange={(e) => handleInputChange("fullName", e.target.value)}
           className="h-11"
+          disabled={isLoading}
+          autoComplete="name"
         />
       </div>
       
@@ -144,6 +215,8 @@ const Signup = () => {
           value={formData.email}
           onChange={(e) => handleInputChange("email", e.target.value)}
           className="h-11"
+          disabled={isLoading}
+          autoComplete="email"
         />
       </div>
       
@@ -156,6 +229,8 @@ const Signup = () => {
           value={formData.password}
           onChange={(e) => handleInputChange("password", e.target.value)}
           className="h-11"
+          disabled={isLoading}
+          autoComplete="new-password"
         />
       </div>
       
@@ -168,6 +243,8 @@ const Signup = () => {
           value={formData.confirmPassword}
           onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
           className="h-11"
+          disabled={isLoading}
+          autoComplete="new-password"
         />
       </div>
     </div>
@@ -183,6 +260,7 @@ const Signup = () => {
           value={formData.companyName}
           onChange={(e) => handleInputChange("companyName", e.target.value)}
           className="h-11"
+          disabled={isLoading}
         />
       </div>
       
@@ -192,7 +270,8 @@ const Signup = () => {
           id="industry"
           value={formData.industry}
           onChange={(e) => handleInputChange("industry", e.target.value)}
-          className="w-full h-11 px-3 py-2 border border-input bg-background rounded-md text-sm"
+          className="w-full h-11 px-3 py-2 border border-input bg-background rounded-md text-sm disabled:opacity-50"
+          disabled={isLoading}
         >
           <option value="">Select your industry</option>
           <option value="Technology">Technology</option>
@@ -224,7 +303,8 @@ const Signup = () => {
                 value={size}
                 checked={formData.companySize === size}
                 onChange={(e) => handleInputChange("companySize", e.target.value)}
-                className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 disabled:opacity-50"
+                disabled={isLoading}
               />
               <Label htmlFor={size} className="text-sm font-normal cursor-pointer">
                 {size}
@@ -240,7 +320,8 @@ const Signup = () => {
           id="companyStage"
           value={formData.companyStage}
           onChange={(e) => handleInputChange("companyStage", e.target.value)}
-          className="w-full h-11 px-3 py-2 border border-input bg-background rounded-md text-sm"
+          className="w-full h-11 px-3 py-2 border border-input bg-background rounded-md text-sm disabled:opacity-50"
+          disabled={isLoading}
         >
           <option value="">Select company stage</option>
           <option value="Startup (0-2 years)">Startup (0-2 years)</option>
@@ -279,7 +360,8 @@ const Signup = () => {
                 id={interest}
                 checked={formData.interests.includes(interest)}
                 onChange={() => handleInterestToggle(interest)}
-                className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 disabled:opacity-50"
+                disabled={isLoading}
               />
               <Label htmlFor={interest} className="text-sm font-normal cursor-pointer">
                 {interest}
@@ -369,13 +451,30 @@ const Signup = () => {
                 
                 <Button
                   onClick={currentStep === totalSteps ? handleSubmit : handleNext}
-                  disabled={isLoading}
-                  className="flex-1 h-11 bg-blue-800 hover:bg-blue-900 text-white"
+                  disabled={isLoading || !canProceed}
+                  className="flex-1 h-11 bg-blue-800 hover:bg-blue-900 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? "Creating Account..." : 
-                   currentStep === totalSteps ? "Create Account" : "Continue"}
+                  {isLoading ? (
+                    <LoadingSpinner size="sm" text="Creating Account..." />
+                  ) : (
+                    currentStep === totalSteps ? "Create Account" : "Continue"
+                  )}
                 </Button>
               </div>
+
+              {isLoading && (
+                <div className="text-center">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRetry}
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    Taking too long? Click to retry
+                  </Button>
+                </div>
+              )}
               
               {currentStep === 1 && (
                 <>
@@ -389,10 +488,10 @@ const Signup = () => {
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3">
-                    <Button variant="outline" className="h-11">
+                    <Button variant="outline" className="h-11" disabled={isLoading}>
                       Google
                     </Button>
-                    <Button variant="outline" className="h-11">
+                    <Button variant="outline" className="h-11" disabled={isLoading}>
                       LinkedIn
                     </Button>
                   </div>

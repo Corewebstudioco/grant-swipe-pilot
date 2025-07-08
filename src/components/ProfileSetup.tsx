@@ -7,8 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Building, MapPin, Users, Target } from 'lucide-react';
+import { Building, MapPin, Users, Target, CheckCircle } from 'lucide-react';
 import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { addDocument } from '@/utils/firebase';
 import { useNavigate } from 'react-router-dom';
@@ -18,7 +20,7 @@ interface ProfileSetupProps {
 }
 
 const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
-  const { user } = useFirebaseAuth();
+  const { user, loading: authLoading } = useFirebaseAuth();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     companyName: '',
@@ -30,8 +32,10 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
     fundingNeeds: '',
     interests: [] as string[]
   });
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitTimeout, setSubmitTimeout] = useState<NodeJS.Timeout | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const industries = [
     'Technology', 'Healthcare', 'Finance', 'Education', 'Manufacturing',
@@ -114,9 +118,23 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
       return;
     }
 
-    setIsLoading(true);
+    if (isSubmitting) {
+      return; // Prevent double submission
+    }
+
+    setIsSubmitting(true);
+    console.log('Starting profile creation for user:', user.uid);
+
+    // Set a timeout for long-running requests
+    const timeoutId = setTimeout(() => {
+      toast.error("Profile creation is taking longer than expected. Please check your connection.");
+      setIsSubmitting(false);
+    }, 15000);
+    
+    setSubmitTimeout(timeoutId);
 
     try {
+      const startTime = Date.now();
       const profileData = {
         userId: user.uid,
         email: user.email,
@@ -135,21 +153,89 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
       console.log('Saving profile data:', profileData);
 
       const result = await addDocument('profiles', profileData);
+      const duration = Date.now() - startTime;
+      
+      console.log(`Profile creation completed in ${duration}ms`);
       
       if (result.success) {
+        console.log('Profile created successfully, showing success state');
+        setShowSuccess(true);
         toast.success('Profile created successfully!');
-        onComplete();
-        navigate('/dashboard');
+        
+        // Show success state briefly before navigating
+        setTimeout(() => {
+          onComplete();
+          navigate('/dashboard');
+        }, 1500);
       } else {
         throw new Error(result.error || 'Failed to create profile');
       }
     } catch (error) {
       console.error('Profile setup error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to create profile. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create profile. Please try again.';
+      toast.error(errorMessage);
     } finally {
-      setIsLoading(false);
+      if (submitTimeout) {
+        clearTimeout(submitTimeout);
+        setSubmitTimeout(null);
+      }
+      if (!showSuccess) {
+        setIsSubmitting(false);
+      }
     }
   };
+
+  const handleRetry = () => {
+    console.log('Retrying profile creation');
+    handleSubmit(new Event('submit') as any);
+  };
+
+  // Show loading skeleton while auth is loading
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <Card className="w-full max-w-2xl">
+          <CardHeader>
+            <Skeleton className="h-8 w-3/4 mx-auto" />
+            <Skeleton className="h-4 w-2/3 mx-auto mt-2" />
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <Skeleton className="h-6 w-48" />
+              <div className="grid md:grid-cols-2 gap-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show success state
+  if (showSuccess) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <Card className="w-full max-w-md text-center">
+          <CardContent className="pt-6">
+            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">
+              Profile Created!
+            </h2>
+            <p className="text-slate-600 mb-4">
+              Welcome to GrantSwipe! Redirecting you to your dashboard...
+            </p>
+            <LoadingSpinner size="md" className="justify-center" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
@@ -179,6 +265,7 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                     value={formData.companyName}
                     onChange={(e) => handleInputChange('companyName', e.target.value)}
                     className={errors.companyName ? 'border-red-500' : ''}
+                    disabled={isSubmitting}
                     required
                   />
                   {errors.companyName && (
@@ -194,6 +281,7 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                     onChange={(e) => handleInputChange('website', e.target.value)}
                     placeholder="https://example.com"
                     className={errors.website ? 'border-red-500' : ''}
+                    disabled={isSubmitting}
                   />
                   {errors.website && (
                     <p className="text-sm text-red-500 mt-1">{errors.website}</p>
@@ -207,6 +295,7 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                   <Select 
                     value={formData.industry} 
                     onValueChange={(value) => handleInputChange('industry', value)}
+                    disabled={isSubmitting}
                   >
                     <SelectTrigger className={errors.industry ? 'border-red-500' : ''}>
                       <SelectValue placeholder="Select your industry" />
@@ -226,6 +315,7 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                   <Select 
                     value={formData.businessSize} 
                     onValueChange={(value) => handleInputChange('businessSize', value)}
+                    disabled={isSubmitting}
                   >
                     <SelectTrigger className={errors.businessSize ? 'border-red-500' : ''}>
                       <SelectValue placeholder="Select business size" />
@@ -252,6 +342,7 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                     onChange={(e) => handleInputChange('location', e.target.value)}
                     placeholder="City, State/Province, Country"
                     className="pl-10"
+                    disabled={isSubmitting}
                   />
                 </div>
               </div>
@@ -264,6 +355,7 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                   onChange={(e) => handleInputChange('description', e.target.value)}
                   placeholder="Brief description of your business and what you do..."
                   rows={3}
+                  disabled={isSubmitting}
                 />
               </div>
             </div>
@@ -283,6 +375,7 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                   onChange={(e) => handleInputChange('fundingNeeds', e.target.value)}
                   placeholder="What do you plan to use grant funding for? (e.g., equipment, research, expansion, etc.)"
                   rows={3}
+                  disabled={isSubmitting}
                 />
               </div>
             </div>
@@ -302,6 +395,7 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
                       id={interest}
                       checked={formData.interests.includes(interest)}
                       onCheckedChange={(checked) => handleInterestChange(interest, checked as boolean)}
+                      disabled={isSubmitting}
                     />
                     <Label htmlFor={interest} className="text-sm font-normal">{interest}</Label>
                   </div>
@@ -312,13 +406,33 @@ const ProfileSetup = ({ onComplete }: ProfileSetupProps) => {
               )}
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full bg-blue-800 hover:bg-blue-900"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Creating Profile...' : 'Complete Setup'}
-            </Button>
+            <div className="space-y-3">
+              <Button 
+                type="submit" 
+                className="w-full bg-blue-800 hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <LoadingSpinner size="sm" text="Creating Profile..." />
+                ) : (
+                  'Complete Setup'
+                )}
+              </Button>
+
+              {isSubmitting && (
+                <div className="text-center">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRetry}
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    Taking too long? Click to retry
+                  </Button>
+                </div>
+              )}
+            </div>
           </form>
         </CardContent>
       </Card>

@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Link, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { toast } from "sonner";
 
@@ -14,6 +15,7 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [loginTimeout, setLoginTimeout] = useState<NodeJS.Timeout | null>(null);
   const { login, isAuthenticated } = useUser();
   const navigate = useNavigate();
 
@@ -24,47 +26,88 @@ const Login = () => {
     }
   }, [isAuthenticated, navigate]);
 
+  // Memoize form validation
+  const isFormValid = useMemo(() => {
+    return email.includes('@') && email.length > 0 && password.length >= 6;
+  }, [email, password]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (loginTimeout) {
+        clearTimeout(loginTimeout);
+      }
+    };
+  }, [loginTimeout]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !password) {
-      toast.error("Please fill in all fields");
+    if (!isFormValid) {
+      toast.error("Please fill in all fields correctly");
       return;
     }
 
-    if (!email.includes('@')) {
-      toast.error("Please enter a valid email address");
-      return;
+    if (isLoading) {
+      return; // Prevent double submission
     }
 
     setIsLoading(true);
+    console.log('Starting login process for:', email);
+    
+    // Set a timeout for long-running requests
+    const timeoutId = setTimeout(() => {
+      toast.error("Login is taking longer than expected. Please check your connection and try again.");
+      setIsLoading(false);
+    }, 15000); // 15 second timeout
+    
+    setLoginTimeout(timeoutId);
+
     try {
-      console.log('Attempting login for:', email);
+      const startTime = Date.now();
       const { error } = await login(email, password);
+      const duration = Date.now() - startTime;
+      
+      console.log(`Login attempt completed in ${duration}ms`);
       
       if (error) {
         console.error('Login error:', error);
         
-        // Handle specific error cases
+        // Handle specific error cases with user-friendly messages
         if (error.code === 'auth/configuration-not-found') {
           toast.error("Authentication service is temporarily unavailable. Please try again in a moment.");
         } else if (error.code === 'auth/network-request-failed') {
           toast.error("Network error. Please check your internet connection and try again.");
+        } else if (error.code === 'auth/too-many-requests') {
+          toast.error("Too many failed attempts. Please wait a few minutes before trying again.");
         } else if (error.message) {
           toast.error(error.message);
         } else {
           toast.error("Failed to sign in. Please try again.");
         }
       } else {
+        console.log('Login successful, redirecting to dashboard');
         toast.success("Welcome back!");
-        navigate("/dashboard");
+        // Small delay to show success message before redirect
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 500);
       }
     } catch (error) {
       console.error('Unexpected login error:', error);
       toast.error("An unexpected error occurred. Please try again.");
     } finally {
+      if (loginTimeout) {
+        clearTimeout(loginTimeout);
+        setLoginTimeout(null);
+      }
       setIsLoading(false);
     }
+  };
+
+  const handleRetry = () => {
+    console.log('Retrying login');
+    handleSubmit(new Event('submit') as any);
   };
 
   return (
@@ -103,6 +146,7 @@ const Login = () => {
                   required
                   className="h-11"
                   disabled={isLoading}
+                  autoComplete="email"
                 />
               </div>
               
@@ -117,6 +161,7 @@ const Login = () => {
                   required
                   className="h-11"
                   disabled={isLoading}
+                  autoComplete="current-password"
                 />
               </div>
               
@@ -143,11 +188,29 @@ const Login = () => {
               
               <Button
                 type="submit"
-                disabled={isLoading}
-                className="w-full h-11 bg-blue-800 hover:bg-blue-900 text-white disabled:opacity-50"
+                disabled={isLoading || !isFormValid}
+                className="w-full h-11 bg-blue-800 hover:bg-blue-900 text-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? "Signing In..." : "Sign In"}
+                {isLoading ? (
+                  <LoadingSpinner size="sm" text="Signing In..." />
+                ) : (
+                  "Sign In"
+                )}
               </Button>
+
+              {isLoading && (
+                <div className="text-center">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRetry}
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    Taking too long? Click to retry
+                  </Button>
+                </div>
+              )}
             </form>
             
             <div className="relative">
