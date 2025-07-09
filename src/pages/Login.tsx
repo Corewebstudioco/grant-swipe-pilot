@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,7 +16,9 @@ const Login = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
-  const { login, isAuthenticated } = useUser();
+  const [loginStartTime, setLoginStartTime] = useState<number | null>(null);
+  const [showRetry, setShowRetry] = useState(false);
+  const { login, isAuthenticated, user } = useUser();
   const navigate = useNavigate();
 
   // Check online status
@@ -34,12 +35,26 @@ const Login = () => {
     };
   }, []);
 
-  // Redirect if already authenticated
+  // Show retry button after 4 seconds of loading
   useEffect(() => {
-    if (isAuthenticated) {
+    let timer: NodeJS.Timeout;
+    if (isLoading && loginStartTime) {
+      timer = setTimeout(() => {
+        setShowRetry(true);
+      }, 4000);
+    } else {
+      setShowRetry(false);
+    }
+    return () => clearTimeout(timer);
+  }, [isLoading, loginStartTime]);
+
+  // Redirect when authenticated AND user data is fully loaded
+  useEffect(() => {
+    if (isAuthenticated && user && user.company) {
+      console.log('User fully loaded, redirecting to dashboard');
       navigate("/dashboard");
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   // Memoize form validation
   const isFormValid = useMemo(() => {
@@ -64,6 +79,8 @@ const Login = () => {
     }
 
     setIsLoading(true);
+    setLoginStartTime(Date.now());
+    setShowRetry(false);
     console.log('Starting login process for:', email);
     
     try {
@@ -76,24 +93,30 @@ const Login = () => {
       if (error) {
         console.error('Login error:', error);
         toast.error(error.message || 'Failed to sign in. Please try again.');
+        setIsLoading(false);
+        setLoginStartTime(null);
       } else {
-        console.log('Login successful, redirecting to dashboard');
-        toast.success("Welcome back!");
-        setTimeout(() => {
-          navigate("/dashboard");
-        }, 500);
+        console.log('Login successful, waiting for user data to load...');
+        toast.success("Welcome back! Loading your profile...");
+        // Don't set isLoading to false here - let the redirect effect handle it
       }
     } catch (error) {
       console.error('Unexpected login error:', error);
       toast.error("An unexpected error occurred. Please try again.");
-    } finally {
       setIsLoading(false);
+      setLoginStartTime(null);
     }
   };
 
   const handleRetry = () => {
     console.log('Retrying login');
-    handleSubmit(new Event('submit') as any);
+    setIsLoading(false);
+    setLoginStartTime(null);
+    setShowRetry(false);
+    // Reset and try again
+    setTimeout(() => {
+      handleSubmit(new Event('submit') as any);
+    }, 100);
   };
 
   return (
@@ -191,7 +214,7 @@ const Login = () => {
                 )}
               </Button>
 
-              {isLoading && !isOffline && (
+              {showRetry && isLoading && !isOffline && (
                 <div className="text-center">
                   <Button
                     type="button"

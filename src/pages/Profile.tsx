@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUser } from '@/contexts/UserContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,20 +9,118 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Building2, Users, MapPin, FileText, BarChart3, Settings, Upload, Download } from 'lucide-react';
+import { profileApi } from '@/utils/api';
+import { toast } from 'sonner';
 
 const Profile = () => {
   const { user, updateProfile } = useUser();
   const [activeTab, setActiveTab] = useState('company');
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Local company state for editing
+  const [company, setCompany] = useState({
+    name: '',
+    industry: '',
+    size: '',
+    stage: '',
+    interests: [] as string[],
+    website: '',
+    description: '',
+    foundedYear: '',
+    revenue: '',
+    location: ''
+  });
 
-  if (!user) {
-    return <div>Please log in to view your profile.</div>;
+  // Initialize company data when user loads
+  useEffect(() => {
+    if (user?.company) {
+      setCompany({
+        name: user.company.name || '',
+        industry: user.company.industry || '',
+        size: user.company.size || '',
+        stage: user.company.stage || '',
+        interests: user.company.interests || [],
+        website: '',
+        description: '',
+        foundedYear: '',
+        revenue: '',
+        location: ''
+      });
+    }
+  }, [user]);
+
+  // Show loading if user or company data is not available
+  if (!user || !user.company) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <LoadingSpinner size="lg" />
+          <p className="mt-4 text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    );
   }
 
-  const handleSave = () => {
-    // Save logic would go here
-    setIsEditing(false);
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      console.log('Saving company profile:', company);
+      
+      const profileData = {
+        companyName: company.name,
+        industry: company.industry,
+        businessSize: company.size,
+        website: company.website,
+        description: company.description,
+        location: company.location,
+        interests: company.interests
+      };
+
+      const result = await profileApi.update(profileData);
+      
+      if (result.success) {
+        // Update the user context with new data
+        updateProfile({
+          ...user,
+          company: {
+            ...user.company,
+            name: company.name,
+            industry: company.industry,
+            size: company.size,
+            interests: company.interests
+          }
+        });
+        
+        toast.success('Profile updated successfully');
+        setIsEditing(false);
+      } else {
+        throw new Error(result.error || 'Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Error saving company profile:', error);
+      toast.error('Error saving company data. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleInputChange = (field: string, value: string | string[]) => {
+    setCompany(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleInterestToggle = (interest: string) => {
+    setCompany(prev => ({
+      ...prev,
+      interests: prev.interests.includes(interest)
+        ? prev.interests.filter(i => i !== interest)
+        : [...prev.interests, interest]
+    }));
   };
 
   const industries = [
@@ -81,20 +178,27 @@ const Profile = () => {
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-navy-600 rounded-full flex items-center justify-center">
                 <span className="text-white text-xl font-bold">
-                  {user.company.name.charAt(0)}
+                  {company.name.charAt(0) || user.company.name.charAt(0)}
                 </span>
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">{user.company.name}</h1>
-                <p className="text-gray-600">{user.company.industry} • {user.company.size}</p>
+                <h1 className="text-3xl font-bold text-gray-900">{company.name}</h1>
+                <p className="text-gray-600">{company.industry} • {company.size}</p>
               </div>
             </div>
             
             <Button 
-              onClick={() => setIsEditing(!isEditing)}
+              onClick={isEditing ? handleSave : () => setIsEditing(true)}
               variant={isEditing ? "default" : "outline"}
+              disabled={isSaving}
             >
-              {isEditing ? 'Save Changes' : 'Edit Profile'}
+              {isSaving ? (
+                <LoadingSpinner size="sm" text="Saving..." />
+              ) : isEditing ? (
+                'Save Changes'
+              ) : (
+                'Edit Profile'
+              )}
             </Button>
           </div>
         </div>
@@ -129,7 +233,8 @@ const Profile = () => {
                     <Label htmlFor="company-name">Company Name</Label>
                     <Input 
                       id="company-name" 
-                      value={user.company.name} 
+                      value={company.name}
+                      onChange={(e) => handleInputChange('name', e.target.value)}
                       disabled={!isEditing}
                     />
                   </div>
@@ -137,13 +242,19 @@ const Profile = () => {
                     <Label htmlFor="website">Website</Label>
                     <Input 
                       id="website" 
-                      placeholder="https://your-company.com" 
+                      placeholder="https://your-company.com"
+                      value={company.website}
+                      onChange={(e) => handleInputChange('website', e.target.value)}
                       disabled={!isEditing}
                     />
                   </div>
                   <div>
                     <Label htmlFor="industry">Industry</Label>
-                    <Select disabled={!isEditing} value={user.company.industry}>
+                    <Select 
+                      disabled={!isEditing} 
+                      value={company.industry}
+                      onValueChange={(value) => handleInputChange('industry', value)}
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -158,7 +269,11 @@ const Profile = () => {
                   </div>
                   <div>
                     <Label htmlFor="company-size">Company Size</Label>
-                    <Select disabled={!isEditing} value={user.company.size}>
+                    <Select 
+                      disabled={!isEditing} 
+                      value={company.size}
+                      onValueChange={(value) => handleInputChange('size', value)}
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -179,6 +294,8 @@ const Profile = () => {
                   <Textarea 
                     id="description" 
                     placeholder="Describe your business, products, and services..."
+                    value={company.description}
+                    onChange={(e) => handleInputChange('description', e.target.value)}
                     disabled={!isEditing}
                     rows={4}
                   />
@@ -189,13 +306,19 @@ const Profile = () => {
                     <Label htmlFor="founded">Founded Year</Label>
                     <Input 
                       id="founded" 
-                      placeholder="2020" 
+                      placeholder="2020"
+                      value={company.foundedYear}
+                      onChange={(e) => handleInputChange('foundedYear', e.target.value)}
                       disabled={!isEditing}
                     />
                   </div>
                   <div>
                     <Label htmlFor="revenue">Annual Revenue</Label>
-                    <Select disabled={!isEditing}>
+                    <Select 
+                      disabled={!isEditing}
+                      value={company.revenue}
+                      onValueChange={(value) => handleInputChange('revenue', value)}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select range" />
                       </SelectTrigger>
@@ -211,7 +334,11 @@ const Profile = () => {
                   </div>
                   <div>
                     <Label htmlFor="stage">Company Stage</Label>
-                    <Select disabled={!isEditing} value={user.company.stage}>
+                    <Select 
+                      disabled={!isEditing} 
+                      value={company.stage}
+                      onValueChange={(value) => handleInputChange('stage', value)}
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -246,7 +373,8 @@ const Profile = () => {
                       <label key={interest} className="flex items-center space-x-2 cursor-pointer">
                         <input 
                           type="checkbox" 
-                          defaultChecked={user.company.interests.includes(interest)}
+                          checked={company.interests.includes(interest)}
+                          onChange={() => handleInterestToggle(interest)}
                           disabled={!isEditing}
                           className="rounded border-gray-300"
                         />
@@ -291,7 +419,9 @@ const Profile = () => {
                     <Label htmlFor="location">Primary Location</Label>
                     <Input 
                       id="location" 
-                      placeholder="City, State" 
+                      placeholder="City, State"
+                      value={company.location}
+                      onChange={(e) => handleInputChange('location', e.target.value)}
                       disabled={!isEditing}
                     />
                   </div>
