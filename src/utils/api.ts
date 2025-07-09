@@ -18,11 +18,12 @@ import type {
 
 const API_BASE_URL = "https://getknntqapnpnsxrzhkb.supabase.co/functions/v1";
 
-// Helper function to get auth headers with timeout and error handling
+// Helper function to get auth headers with improved error handling
 const getAuthHeaders = async (timeoutMs = 5000) => {
   try {
+    console.log('Getting auth session...');
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Auth timeout')), timeoutMs)
+      setTimeout(() => reject(new Error('Auth session timeout')), timeoutMs)
     );
     
     const authPromise = supabase.auth.getSession();
@@ -30,14 +31,20 @@ const getAuthHeaders = async (timeoutMs = 5000) => {
     
     if (error) {
       console.error('Auth session error:', error);
-      throw new Error('Authentication failed');
+      throw new Error('Failed to get authentication session');
     }
     
-    if (!session?.access_token) {
-      console.error('No access token found');
+    if (!session) {
+      console.error('No active session found');
+      throw new Error('No active session. Please log in again.');
+    }
+
+    if (!session.access_token) {
+      console.error('No access token in session');
       throw new Error('Authentication expired. Please refresh and login again.');
     }
 
+    console.log('Auth headers obtained successfully');
     return {
       'Authorization': `Bearer ${session.access_token}`,
       'Content-Type': 'application/json',
@@ -45,21 +52,24 @@ const getAuthHeaders = async (timeoutMs = 5000) => {
     };
   } catch (error) {
     console.error('Failed to get auth headers:', error);
-    if (error instanceof Error && error.message.includes('timeout')) {
-      toast.error("Connection timeout. Please check your internet connection.");
-    } else if (error instanceof Error) {
-      toast.error(error.message);
+    if (error instanceof Error) {
+      if (error.message.includes('timeout')) {
+        toast.error("Connection timeout. Please check your internet connection.");
+      } else {
+        toast.error(error.message);
+      }
     }
     throw error;
   }
 };
 
-// Generic API call wrapper with timeout and error handling
+// Generic API call wrapper with improved error handling
 const makeApiCall = async (url: string, options: RequestInit = {}, timeoutMs = 10000) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   
   try {
+    console.log(`Making API call to: ${url}`);
     const response = await fetch(url, {
       ...options,
       signal: controller.signal,
@@ -80,6 +90,7 @@ const makeApiCall = async (url: string, options: RequestInit = {}, timeoutMs = 1
       }
     }
     
+    console.log(`API call successful: ${url}`);
     return response.json();
   } catch (error) {
     clearTimeout(timeoutId);

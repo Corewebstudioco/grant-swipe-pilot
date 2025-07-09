@@ -1,4 +1,3 @@
-
 import { useUser } from "@/contexts/UserContext";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useDashboardActivity } from "@/hooks/useDashboardActivity";
@@ -17,10 +16,13 @@ import DashboardInterests from "@/components/dashboard/DashboardInterests";
 import DashboardQuickActions from "@/components/dashboard/DashboardQuickActions";
 
 const Dashboard = () => {
-  const { user, session, logout } = useUser();
+  const { user, session, logout, isAuthenticated } = useUser();
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
   const [isCheckingProfile, setIsCheckingProfile] = useState(true);
   const [aiRecommendations, setAiRecommendations] = useState([]);
+  
+  // Only fetch data when we have a valid session
+  const shouldFetchData = isAuthenticated && session?.access_token && user;
   
   const { data: statsData, isLoading: statsLoading } = useDashboardStats();
   const { data: activityData, isLoading: activityLoading } = useDashboardActivity();
@@ -58,7 +60,7 @@ const Dashboard = () => {
   // Check if user needs profile setup
   useEffect(() => {
     const checkProfile = async () => {
-      if (!session?.user) {
+      if (!isAuthenticated || !session?.user) {
         setIsCheckingProfile(false);
         return;
       }
@@ -83,14 +85,18 @@ const Dashboard = () => {
     };
 
     checkProfile();
-  }, [session?.user]);
+  }, [isAuthenticated, session?.user]);
 
-  // Load AI recommendations
+  // Load AI recommendations only when authenticated and profile is ready
   useEffect(() => {
     const loadAIRecommendations = async () => {
-      if (!user || needsProfileSetup) return;
+      if (!shouldFetchData || needsProfileSetup) {
+        console.log('Skipping AI recommendations - not ready');
+        return;
+      }
       
       try {
+        console.log('Loading AI recommendations...');
         const businessProfile = {
           company_name: user?.company?.name || 'Demo Company',
           industry: 'Technology',
@@ -100,13 +106,15 @@ const Dashboard = () => {
         
         const recommendations = await getRecommendations(businessProfile, mockGrants);
         setAiRecommendations(recommendations.recommendations || []);
+        console.log('AI recommendations loaded successfully');
       } catch (error) {
         console.error('Failed to load AI recommendations:', error);
+        toast.error('Failed to load AI recommendations. Please try again.');
       }
     };
 
     loadAIRecommendations();
-  }, [user, needsProfileSetup, getRecommendations]);
+  }, [shouldFetchData, needsProfileSetup, getRecommendations, user]);
 
   const handleStartSwiping = () => {
     grantMatchingMutation.mutate();
@@ -125,11 +133,14 @@ const Dashboard = () => {
     window.location.reload();
   };
 
-  // Show loading while checking profile
-  if (isCheckingProfile) {
+  // Show loading while checking authentication or profile
+  if (!isAuthenticated || isCheckingProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-800"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-800 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading your dashboard...</p>
+        </div>
       </div>
     );
   }
