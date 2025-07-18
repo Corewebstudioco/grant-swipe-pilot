@@ -151,38 +151,51 @@ const Signup = () => {
       console.log('Creating user with data:', userData);
 
       // Use Supabase signup
+      console.log('Attempting Supabase signup for:', formData.email);
+      
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
-          data: userData
+          data: {
+            display_name: formData.fullName,
+            company_name: formData.companyName,
+            industry: formData.industry,
+            business_size: formData.companySize,
+            company_stage: formData.companyStage,
+            interests: formData.interests
+          }
         }
       });
       
-      const result = { success: !error, user: data.user, error };
-      const duration = Date.now() - startTime;
+      console.log('Supabase signup response:', { data, error });
       
-      console.log(`Signup attempt completed in ${duration}ms`);
+      if (error) {
+        console.error('Signup error:', error);
+        
+        // Handle Supabase-specific error codes
+        if (error.message?.includes('User already registered')) {
+          toast.error("An account with this email already exists");
+        } else if (error.message?.includes('Password should be at least')) {
+          toast.error("Password is too weak. Please choose a stronger password.");
+        } else if (error.message?.includes('Invalid email')) {
+          toast.error("Please enter a valid email address.");
+        } else if (error.message?.includes('Network')) {
+          toast.error("Network error. Please check your internet connection.");
+        } else {
+          toast.error(error.message || "Failed to create account. Please try again.");
+        }
+        return;
+      }
       
-      if (result.success) {
-        console.log('Account created successfully');
+      if (data.user) {
+        console.log('Account created successfully:', data.user.id);
         toast.success("Account created successfully! Welcome to GrantSwipe!");
         // The useEffect hook will handle the redirect when authentication state changes
       } else {
-        console.error('Signup error:', result.error);
-        
-        if (result.error?.code === 'auth/email-already-in-use') {
-          toast.error("An account with this email already exists");
-        } else if (result.error?.code === 'auth/weak-password') {
-          toast.error("Password is too weak. Please choose a stronger password.");
-        } else if (result.error?.code === 'auth/network-request-failed') {
-          toast.error("Network error. Please check your internet connection.");
-        } else if (result.error?.message) {
-          toast.error(result.error.message);
-        } else {
-          toast.error("Failed to create account. Please try again.");
-        }
+        console.error('No user returned from signup');
+        toast.error("Failed to create account. Please try again.");
       }
     } catch (error) {
       console.error('Unexpected signup error:', error);
