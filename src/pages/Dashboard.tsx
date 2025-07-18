@@ -5,7 +5,7 @@ import { useGrantMatching } from "@/hooks/useGrantMatching";
 import { useGrantAI } from "@/hooks/useGrantAI";
 import { useState, useEffect } from "react";
 import ProfileSetup from "@/components/ProfileSetup";
-import { getDocument } from "@/utils/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
@@ -67,9 +67,15 @@ const Dashboard = () => {
 
       try {
         console.log('Checking profile for user:', session.user.id);
-        const response = await getDocument('profiles', session.user.id);
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
         
-        if (!response.success || !response.data?.companyName) {
+        const response = { success: !error, data: profile, error };
+        
+        if (!response.success || !response.data?.company_name) {
           console.log('Profile setup needed');
           setNeedsProfileSetup(true);
         } else {

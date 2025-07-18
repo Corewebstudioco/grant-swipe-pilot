@@ -7,8 +7,8 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
-import { createUser } from "@/utils/firebaseAuth";
-import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
+import { useUser } from "@/contexts/UserContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const Signup = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -26,7 +26,7 @@ const Signup = () => {
     interests: [] as string[]
   });
 
-  const { user, isAuthenticated } = useFirebaseAuth();
+  const { user, isAuthenticated } = useUser();
   const navigate = useNavigate();
 
   // Redirect if already authenticated
@@ -150,7 +150,17 @@ const Signup = () => {
 
       console.log('Creating user with data:', userData);
 
-      const result = await createUser(formData.email, formData.password, userData);
+      // Use Supabase signup
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: userData
+        }
+      });
+      
+      const result = { success: !error, user: data.user, error };
       const duration = Date.now() - startTime;
       
       console.log(`Signup attempt completed in ${duration}ms`);
