@@ -31,7 +31,9 @@ const Signup = () => {
 
   // Redirect if already authenticated
   useEffect(() => {
+    console.log('Signup page - Auth state:', { isAuthenticated, user });
     if (isAuthenticated) {
+      console.log('User already authenticated, redirecting to dashboard');
       navigate("/dashboard");
     }
   }, [isAuthenticated, navigate]);
