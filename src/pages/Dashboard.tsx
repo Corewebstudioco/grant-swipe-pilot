@@ -101,26 +101,42 @@ const Dashboard = () => {
         return;
       }
       
-      try {
-        console.log('Loading AI recommendations...');
-        const businessProfile = {
-          company_name: user?.company?.name || 'Demo Company',
-          industry: 'Technology',
-          business_size: 'Small',
-          location: 'California'
-        };
-        
-        const recommendations = await getRecommendations(businessProfile, mockGrants);
-        setAiRecommendations(recommendations.recommendations || []);
-        console.log('AI recommendations loaded successfully');
-      } catch (error) {
-        console.error('Failed to load AI recommendations:', error);
-        toast.error('Failed to load AI recommendations. Please try again.');
-      }
+      // Temporarily disable AI recommendations due to quota exceeded
+      console.log('AI recommendations temporarily disabled due to API quota');
+      setAiRecommendations([
+        {
+          id: '1',
+          title: 'Small Business Innovation Research (SBIR)',
+          description: 'High compatibility match for your business profile',
+          compatibilityScore: 85,
+          reasons: ['Technology focus', 'Business size match']
+        },
+        {
+          id: '2', 
+          title: 'Rural Business Development Grant',
+          description: 'Good fit for expansion opportunities',
+          compatibilityScore: 72,
+          reasons: ['Growth stage alignment', 'Industry match']
+        }
+      ]);
+      
+      // Original AI call - commented out to save API quota
+      // try {
+      //   const businessProfile = {
+      //     company_name: user?.company?.name || 'Demo Company',
+      //     industry: 'Technology',
+      //     business_size: 'Small',
+      //     location: 'California'
+      //   };
+      //   const recommendations = await getRecommendations(businessProfile, mockGrants);
+      //   setAiRecommendations(recommendations.recommendations || []);
+      // } catch (error) {
+      //   console.error('Failed to load AI recommendations:', error);
+      // }
     };
 
     loadAIRecommendations();
-  }, [shouldFetchData, needsProfileSetup, getRecommendations, user]);
+  }, [shouldFetchData, needsProfileSetup, user]);
 
   const handleStartSwiping = () => {
     grantMatchingMutation.mutate();
