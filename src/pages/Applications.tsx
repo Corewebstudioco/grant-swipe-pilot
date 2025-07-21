@@ -5,10 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { Calendar, FileText, Clock, CheckCircle, XCircle, AlertCircle, Edit3 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Calendar, FileText, Clock, CheckCircle, XCircle, AlertCircle, Edit3, Plus } from 'lucide-react';
+import { ApplicationForm } from '@/components/ApplicationForm';
 
 const Applications = () => {
   const [selectedTab, setSelectedTab] = useState('all');
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   // Sample applications data
   const applications = [
@@ -145,6 +148,24 @@ const Applications = () => {
                 <div className="text-2xl font-bold text-orange-600">2.5</div>
                 <div className="text-sm text-gray-500">Avg Processing (months)</div>
               </div>
+              
+              <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                <DialogTrigger asChild>
+                  <Button className="ml-4">
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Application
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Submit Grant Application</DialogTitle>
+                  </DialogHeader>
+                  <ApplicationForm 
+                    onSuccess={() => setIsFormOpen(false)}
+                    onCancel={() => setIsFormOpen(false)}
+                  />
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </div>
