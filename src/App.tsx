@@ -14,6 +14,7 @@ import Discover from "./pages/Discover";
 import Applications from "./pages/Applications";
 import Matches from "./pages/Matches";
 import Profile from "./pages/Profile";
+import Documents from "./pages/Documents";
 import AIGrantAnalyzer from "./components/AIGrantAnalyzer";
 import AIApplicationAssistant from "./components/AIApplicationAssistant";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -66,6 +67,11 @@ const App = () => (
               <Route path="/profile" element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              } />
+              <Route path="/documents" element={
+                <ProtectedRoute>
+                  <Documents />
                 </ProtectedRoute>
               } />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

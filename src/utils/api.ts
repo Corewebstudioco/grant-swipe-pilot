@@ -383,3 +383,20 @@ export const aiApi = {
     }
   }
 };
+
+// Documents API
+export const documentsApi = {
+  getAll: () => makeApiCall('/functions/v1/documents'),
+  upload: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return makeApiCall('/functions/v1/documents/upload', {
+      method: 'POST',
+      body: formData,
+    });
+  },
+  delete: (documentId: string) => makeApiCall(`/functions/v1/documents/${documentId}`, {
+    method: 'DELETE',
+  }),
+  getDownloadUrl: (documentId: string) => makeApiCall(`/functions/v1/documents/${documentId}/download`),
+};
