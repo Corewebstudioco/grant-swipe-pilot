@@ -19,6 +19,7 @@ export type Database = {
           ai_assistance_used: boolean | null
           application_data: Json | null
           created_at: string | null
+          funding_amount: number | null
           grant_id: string | null
           id: string
           match_id: string | null
@@ -32,6 +33,7 @@ export type Database = {
           ai_assistance_used?: boolean | null
           application_data?: Json | null
           created_at?: string | null
+          funding_amount?: number | null
           grant_id?: string | null
           id?: string
           match_id?: string | null
@@ -45,6 +47,7 @@ export type Database = {
           ai_assistance_used?: boolean | null
           application_data?: Json | null
           created_at?: string | null
+          funding_amount?: number | null
           grant_id?: string | null
           id?: string
           match_id?: string | null
@@ -276,6 +279,51 @@ export type Database = {
         }
         Relationships: []
       }
+      team_members: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invite_token: string | null
+          invited_at: string
+          inviter_id: string
+          name: string
+          role: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invite_token?: string | null
+          invited_at?: string
+          inviter_id: string
+          name: string
+          role: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invite_token?: string | null
+          invited_at?: string
+          inviter_id?: string
+          name?: string
+          role?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_activity: {
         Row: {
           activity_type: string | null
@@ -323,7 +371,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_dashboard_metrics: {
+        Args: { user_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
