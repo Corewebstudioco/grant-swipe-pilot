@@ -1,13 +1,47 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ActivityItem } from "@/types/api";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DashboardActivityProps {
   activities: ActivityItem[];
   isLoading: boolean;
+  onActivityUpdate?: (newActivity: ActivityItem) => void;
 }
 
-const DashboardActivity = ({ activities, isLoading }: DashboardActivityProps) => {
+const DashboardActivity = ({ activities, isLoading, onActivityUpdate }: DashboardActivityProps) => {
+  // Set up real-time subscription for activity updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('user_activity_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'user_activity'
+        },
+        (payload) => {
+          console.log('New activity:', payload);
+          if (onActivityUpdate && payload.new) {
+            const newActivity: ActivityItem = {
+              id: payload.new.id,
+              description: `New ${payload.new.activity_type}`,
+              timeAgo: 'Just now',
+              type: payload.new.activity_type
+            };
+            onActivityUpdate(newActivity);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [onActivityUpdate]);
   return (
     <Card>
       <CardHeader>
@@ -30,9 +64,9 @@ const DashboardActivity = ({ activities, isLoading }: DashboardActivityProps) =>
           </div>
         ) : activities.length > 0 ? (
           <div className="space-y-4">
-            {activities.map((activity) => (
-              <div key={activity.id} className="flex items-start gap-3">
-                <div className={`w-2 h-2 rounded-full mt-2 ${
+            {activities.map((activity, index) => (
+              <div key={activity.id} className="flex items-start gap-3 p-3 hover:bg-slate-50 rounded-lg transition-colors">
+                <div className={`w-3 h-3 rounded-full mt-1 shadow-sm ${
                   activity.type === 'match' ? 'bg-green-500' :
                   activity.type === 'application' ? 'bg-blue-500' :
                   activity.type === 'ai_analysis' ? 'bg-purple-500' :
@@ -41,9 +75,14 @@ const DashboardActivity = ({ activities, isLoading }: DashboardActivityProps) =>
                   activity.type === 'general' ? 'bg-slate-500' :
                   'bg-slate-500'
                 }`}></div>
-                <div>
-                  <p className="text-sm font-medium text-slate-900">{activity.description}</p>
-                  <p className="text-xs text-slate-600">{activity.timeAgo}</p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between">
+                    <p className="text-sm font-medium text-slate-900 leading-5">{activity.description}</p>
+                    {index === 0 && (
+                      <Badge variant="secondary" className="ml-2 text-xs">New</Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-600 mt-1">{activity.timeAgo}</p>
                 </div>
               </div>
             ))}

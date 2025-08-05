@@ -2,9 +2,11 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Search, User, X, Heart, Clock, DollarSign, Building, TrendingUp, FileText, Target, Settings } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Bell, Search, User, X, Heart, Clock, DollarSign, Building, TrendingUp, FileText, Target, Settings, Filter } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
+import { useGrantMatching } from "@/hooks/useGrantMatching";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
@@ -16,10 +18,18 @@ const Discover = () => {
   const [currentGrantIndex, setCurrentGrantIndex] = useState(0);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [lastMatch, setLastMatch] = useState<GrantData | null>(null);
+  const grantMatching = useGrantMatching();
+
+  const [filters, setFilters] = useState({
+    industry: '',
+    category: '',
+    fundingRange: '',
+    deadlineFilter: 'all'
+  });
 
   const { data: grantsData, isLoading } = useQuery({
-    queryKey: ['grants'],
-    queryFn: () => grantsApi.getAll(),
+    queryKey: ['grants', filters],
+    queryFn: () => grantsApi.getAll(filters),
   });
 
   const grants = grantsData?.grants || [];
@@ -106,8 +116,8 @@ const Discover = () => {
             </Link>
           </div>
           
-          <div className="flex-1 max-w-md mx-8">
-            <div className="relative">
+          <div className="flex-1 max-w-2xl mx-8 flex gap-4">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input 
                 type="text" 
@@ -115,6 +125,18 @@ const Discover = () => {
                 className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+            <Select value={filters.industry} onValueChange={(value) => setFilters(prev => ({ ...prev, industry: value }))}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filter by industry" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Industries</SelectItem>
+                <SelectItem value="Technology">Technology</SelectItem>
+                <SelectItem value="Healthcare">Healthcare</SelectItem>
+                <SelectItem value="Manufacturing">Manufacturing</SelectItem>
+                <SelectItem value="Education">Education</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="flex items-center gap-4">
@@ -273,11 +295,14 @@ const Discover = () => {
                   Check back tomorrow for new opportunities, or adjust your preferences to see more matches.
                 </p>
                 <div className="flex gap-4 justify-center">
-                  <Link to="/profile">
-                    <Button variant="outline">
-                      Adjust Preferences
-                    </Button>
-                  </Link>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => grantMatching.mutate()}
+                    disabled={grantMatching.isPending}
+                  >
+                    <Filter className="w-4 h-4 mr-2" />
+                    {grantMatching.isPending ? 'Finding Matches...' : 'Find New Matches'}
+                  </Button>
                   <Link to="/matches">
                     <Button className="bg-blue-800 hover:bg-blue-900">
                       View Your Matches

@@ -12,6 +12,7 @@ import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardStats from "@/components/dashboard/DashboardStats";
 import DashboardAIRecommendations from "@/components/dashboard/DashboardAIRecommendations";
 import DashboardActivity from "@/components/dashboard/DashboardActivity";
+import { useRealtimeActivity } from "@/hooks/useRealtimeActivity";
 import DashboardInterests from "@/components/dashboard/DashboardInterests";
 import DashboardQuickActions from "@/components/dashboard/DashboardQuickActions";
 
@@ -26,6 +27,7 @@ const Dashboard = () => {
   
   const { data: statsData, isLoading: statsLoading } = useDashboardStats();
   const { data: activityData, isLoading: activityLoading } = useDashboardActivity();
+  const realtimeActivities = useRealtimeActivity(activityData?.activities || []);
   const grantMatchingMutation = useGrantMatching();
   const { getRecommendations, loading: aiLoading } = useGrantAI();
 
@@ -210,7 +212,7 @@ const Dashboard = () => {
 
             {/* Recent Activity and Interests */}
             <div className="grid md:grid-cols-2 gap-6 mb-8">
-              <DashboardActivity activities={activities} isLoading={activityLoading} />
+              <DashboardActivity activities={realtimeActivities} isLoading={activityLoading} />
               <DashboardInterests interests={user?.company.interests || []} />
             </div>
 
