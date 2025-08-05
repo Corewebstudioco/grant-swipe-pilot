@@ -68,38 +68,53 @@ serve(async (req) => {
 
       if (successfulAppsError) throw successfulAppsError;
 
-      // Calculate success rate
-      const successRate = totalApps?.length > 0 
-        ? Math.round((successfulApps?.length || 0) / totalApps.length * 100)
-        : 85; // Default value for new users
+      // Try to use the database function for enhanced metrics
+      const { data: enhancedMetrics, error: metricsError } = await supabaseClient
+        .rpc('get_dashboard_metrics', { user_id: user.id });
 
-      // Get applications from last week for comparison
-      const { data: lastWeekApps, error: lastWeekAppsError } = await supabaseClient
-        .from('applications')
-        .select('id')
-        .eq('user_id', user.id)
-        .gte('created_at', weekAgo);
+      if (metricsError) {
+        console.log('Enhanced metrics not available, using fallback calculations:', metricsError);
+        
+        // Fallback to basic calculations
+        const successRate = totalApps?.length > 0 
+          ? Math.round((successfulApps?.length || 0) / totalApps.length * 100)
+          : 0;
 
-      if (lastWeekAppsError) throw lastWeekAppsError;
+        // Get applications from last week for comparison
+        const { data: lastWeekApps, error: lastWeekAppsError } = await supabaseClient
+          .from('applications')
+          .select('id')
+          .eq('user_id', user.id)
+          .gte('created_at', weekAgo);
 
-      const stats = {
-        activeApplications: {
-          count: activeApps?.length || 0,
-          change: `+${Math.max(0, (activeApps?.length || 0) - Math.max(0, (lastWeekApps?.length || 0) - (activeApps?.length || 0)))} this week`
-        },
-        newMatches: {
-          count: newMatches?.length || 0,
-          change: 'Updated today'
-        },
-        successRate: {
-          percentage: successRate,
-          change: successRate > 70 ? 'Above average' : 'Below average'
-        },
-        totalApplied: {
-          count: totalApps?.length || 0,
-          change: 'All time'
-        }
-      };
+        if (lastWeekAppsError) throw lastWeekAppsError;
+
+        const stats = {
+          activeApplications: {
+            count: activeApps?.length || 0,
+            change: `+${Math.max(0, (activeApps?.length || 0) - Math.max(0, (lastWeekApps?.length || 0) - (activeApps?.length || 0)))} this week`
+          },
+          newMatches: {
+            count: newMatches?.length || 0,
+            change: 'Updated today'
+          },
+          successRate: {
+            percentage: successRate,
+            change: successRate > 70 ? 'Above average' : 'Below average'
+          },
+          totalApplied: {
+            count: totalApps?.length || 0,
+            change: 'All time'
+          }
+        };
+
+        return new Response(JSON.stringify({ stats }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Use enhanced metrics from database function
+      const stats = enhancedMetrics;
 
       return new Response(JSON.stringify({ stats }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

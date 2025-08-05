@@ -15,6 +15,7 @@ import Applications from "./pages/Applications";
 import Matches from "./pages/Matches";
 import Profile from "./pages/Profile";
 import Documents from "./pages/Documents";
+import TeamManagement from "./pages/TeamManagement";
 import AIGrantAnalyzer from "./components/AIGrantAnalyzer";
 import AIApplicationAssistant from "./components/AIApplicationAssistant";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -72,6 +73,11 @@ const App = () => (
               <Route path="/documents" element={
                 <ProtectedRoute>
                   <Documents />
+                </ProtectedRoute>
+              } />
+              <Route path="/team" element={
+                <ProtectedRoute>
+                  <TeamManagement />
                 </ProtectedRoute>
               } />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
