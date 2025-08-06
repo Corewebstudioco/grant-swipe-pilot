@@ -19,6 +19,7 @@ import TeamManagement from "./pages/TeamManagement";
 import AIGrantAnalyzer from "./components/AIGrantAnalyzer";
 import AIApplicationAssistant from "./components/AIApplicationAssistant";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AppLayout from "./components/layout/AppLayout";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,51 +36,24 @@ const App = () => (
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
-              <Route path="/dashboard" element={
+              
+              {/* Protected routes with shared layout */}
+              <Route path="/" element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <AppLayout />
                 </ProtectedRoute>
-              } />
-              <Route path="/discover" element={
-                <ProtectedRoute>
-                  <Discover />
-                </ProtectedRoute>
-              } />
-              <Route path="/applications" element={
-                <ProtectedRoute>
-                  <Applications />
-                </ProtectedRoute>
-              } />
-              <Route path="/matches" element={
-                <ProtectedRoute>
-                  <Matches />
-                </ProtectedRoute>
-              } />
-              <Route path="/ai-analyzer" element={
-                <ProtectedRoute>
-                  <AIGrantAnalyzer />
-                </ProtectedRoute>
-              } />
-              <Route path="/ai-assistant" element={
-                <ProtectedRoute>
-                  <AIApplicationAssistant />
-                </ProtectedRoute>
-              } />
-              <Route path="/profile" element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              } />
-              <Route path="/documents" element={
-                <ProtectedRoute>
-                  <Documents />
-                </ProtectedRoute>
-              } />
-              <Route path="/team" element={
-                <ProtectedRoute>
-                  <TeamManagement />
-                </ProtectedRoute>
-              } />
+              }>
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="discover" element={<Discover />} />
+                <Route path="applications" element={<Applications />} />
+                <Route path="matches" element={<Matches />} />
+                <Route path="ai-analyzer" element={<AIGrantAnalyzer />} />
+                <Route path="ai-assistant" element={<AIApplicationAssistant />} />
+                <Route path="profile" element={<Profile />} />
+                <Route path="documents" element={<Documents />} />
+                <Route path="team" element={<TeamManagement />} />
+              </Route>
+              
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
