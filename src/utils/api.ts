@@ -155,7 +155,10 @@ export const profileApi = {
 // Grant Discovery API
 export const grantsApi = {
   async getAll(filters?: {
+    industry?: string;
     category?: string;
+    fundingRange?: string;
+    deadlineFilter?: string;
     minAmount?: string;
     maxAmount?: string;
     deadline?: string;
@@ -163,7 +166,10 @@ export const grantsApi = {
     try {
       const headers = await getAuthHeaders();
       const params = new URLSearchParams();
+      if (filters?.industry) params.append('industry', filters.industry);
       if (filters?.category) params.append('category', filters.category);
+      if (filters?.fundingRange) params.append('fundingRange', filters.fundingRange);
+      if (filters?.deadlineFilter) params.append('deadlineFilter', filters.deadlineFilter);
       if (filters?.minAmount) params.append('minAmount', filters.minAmount);
       if (filters?.maxAmount) params.append('maxAmount', filters.maxAmount);
       if (filters?.deadline) params.append('deadline', filters.deadline);
