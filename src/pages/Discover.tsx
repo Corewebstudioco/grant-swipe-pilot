@@ -1,8 +1,9 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Bell, Search, User, X, Heart, Clock, DollarSign, Building, TrendingUp, FileText, Target, Settings, Filter } from "lucide-react";
+import { Bell, Search, User, X, Heart, Clock, DollarSign, Building, Filter } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { useGrantMatching } from "@/hooks/useGrantMatching";
@@ -150,164 +151,136 @@ const Discover = () => {
         </div>
       </header>
 
-      <div className="flex">
-        {/* Sidebar */}
-        <aside className="w-64 bg-white border-r border-slate-200 min-h-[calc(100vh-73px)]">
-          <nav className="p-6 space-y-2">
-            <Link to="/dashboard" className="flex items-center gap-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
-              <TrendingUp className="h-5 w-5" />
-              Dashboard
-            </Link>
-            <Link to="/discover" className="flex items-center gap-3 px-3 py-2 text-blue-700 bg-blue-50 rounded-lg font-medium">
-              <Search className="h-5 w-5" />
-              Discover Grants
-            </Link>
-            <Link to="/applications" className="flex items-center gap-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
-              <FileText className="h-5 w-5" />
-              My Applications
-            </Link>
-            <Link to="/matches" className="flex items-center gap-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
-              <Target className="h-5 w-5" />
-              Matches
-            </Link>
-            <Link to="/profile" className="flex items-center gap-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
-              <User className="h-5 w-5" />
-              Profile
-            </Link>
-          </nav>
-        </aside>
+      {/* Main Content - No duplicate sidebar */}
+      <main className="p-6">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">
+              Discover Your Perfect Grant
+            </h1>
+            <p className="text-slate-600">
+              {remainingCount > 0 
+                ? `${remainingCount + 1} grants to review` 
+                : "No more grants for now"}
+            </p>
+          </div>
 
-        {/* Main Content */}
-        <main className="flex-1 p-6">
-          <div className="max-w-4xl mx-auto">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">
-                Discover Your Perfect Grant
-              </h1>
-              <p className="text-slate-600">
-                {remainingCount > 0 
-                  ? `${remainingCount + 1} grants to review` 
-                  : "No more grants for now"}
+          {/* Grant Card or Empty State */}
+          {currentGrant ? (
+            <div className="flex flex-col items-center">
+              <Card className="w-full max-w-md shadow-xl border-0 mb-8">
+                <CardContent className="p-6">
+                  {/* Deadline Badge */}
+                  <div className="flex justify-end items-start mb-4">
+                    <Badge className={getUrgencyColor(currentGrant.deadline)}>
+                      <Clock className="w-3 h-3 mr-1" />
+                      {formatDeadline(currentGrant.deadline)}
+                    </Badge>
+                  </div>
+
+                  {/* Grant Title and Organization */}
+                  <div className="mb-4">
+                    <h2 className="text-xl font-bold text-slate-900 mb-2">
+                      {currentGrant.title}
+                    </h2>
+                    <div className="flex items-center gap-2 text-slate-600 mb-3">
+                      <Building className="w-4 h-4" />
+                      <span className="text-sm">{currentGrant.agency}</span>
+                    </div>
+                  </div>
+
+                  {/* Funding Amount */}
+                  {currentGrant.amount && (
+                    <div className="bg-green-50 p-4 rounded-lg mb-4">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="w-5 h-5 text-green-600" />
+                        <span className="text-2xl font-bold text-green-800">
+                          {currentGrant.amount}
+                        </span>
+                      </div>
+                      <p className="text-sm text-green-600 mt-1">Funding Available</p>
+                    </div>
+                  )}
+
+                  {/* Description */}
+                  <div className="mb-4">
+                    <p className="text-sm text-slate-600 line-clamp-4">
+                      {currentGrant.description}
+                    </p>
+                  </div>
+
+                  {/* Category and Industry Tags */}
+                  <div className="flex flex-wrap gap-2">
+                    {currentGrant.category && (
+                      <Badge variant="secondary" className="text-xs">
+                        {currentGrant.category}
+                      </Badge>
+                    )}
+                    {currentGrant.industry_tags?.slice(0, 3).map((tag, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Action Buttons */}
+              <div className="flex gap-6">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={handlePass}
+                  className="w-16 h-16 rounded-full border-2 border-red-200 hover:border-red-300 hover:bg-red-50"
+                >
+                  <X className="w-8 h-8 text-red-500" />
+                </Button>
+                
+                <Button
+                  size="lg"
+                  onClick={handleInterested}
+                  className="w-16 h-16 rounded-full bg-green-500 hover:bg-green-600 text-white"
+                >
+                  <Heart className="w-8 h-8" />
+                </Button>
+              </div>
+
+              <p className="text-sm text-slate-500 mt-4">
+                Swipe left to pass • Swipe right to show interest
               </p>
             </div>
-
-            {/* Grant Card or Empty State */}
-            {currentGrant ? (
-              <div className="flex flex-col items-center">
-                <Card className="w-full max-w-md shadow-xl border-0 mb-8">
-                  <CardContent className="p-6">
-                    {/* Deadline Badge */}
-                    <div className="flex justify-end items-start mb-4">
-                      <Badge className={getUrgencyColor(currentGrant.deadline)}>
-                        <Clock className="w-3 h-3 mr-1" />
-                        {formatDeadline(currentGrant.deadline)}
-                      </Badge>
-                    </div>
-
-                    {/* Grant Title and Organization */}
-                    <div className="mb-4">
-                      <h2 className="text-xl font-bold text-slate-900 mb-2">
-                        {currentGrant.title}
-                      </h2>
-                      <div className="flex items-center gap-2 text-slate-600 mb-3">
-                        <Building className="w-4 h-4" />
-                        <span className="text-sm">{currentGrant.agency}</span>
-                      </div>
-                    </div>
-
-                    {/* Funding Amount */}
-                    {currentGrant.amount && (
-                      <div className="bg-green-50 p-4 rounded-lg mb-4">
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="w-5 h-5 text-green-600" />
-                          <span className="text-2xl font-bold text-green-800">
-                            {currentGrant.amount}
-                          </span>
-                        </div>
-                        <p className="text-sm text-green-600 mt-1">Funding Available</p>
-                      </div>
-                    )}
-
-                    {/* Description */}
-                    <div className="mb-4">
-                      <p className="text-sm text-slate-600 line-clamp-4">
-                        {currentGrant.description}
-                      </p>
-                    </div>
-
-                    {/* Category and Industry Tags */}
-                    <div className="flex flex-wrap gap-2">
-                      {currentGrant.category && (
-                        <Badge variant="secondary" className="text-xs">
-                          {currentGrant.category}
-                        </Badge>
-                      )}
-                      {currentGrant.industry_tags?.slice(0, 3).map((tag, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Action Buttons */}
-                <div className="flex gap-6">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={handlePass}
-                    className="w-16 h-16 rounded-full border-2 border-red-200 hover:border-red-300 hover:bg-red-50"
-                  >
-                    <X className="w-8 h-8 text-red-500" />
-                  </Button>
-                  
-                  <Button
-                    size="lg"
-                    onClick={handleInterested}
-                    className="w-16 h-16 rounded-full bg-green-500 hover:bg-green-600 text-white"
-                  >
-                    <Heart className="w-8 h-8" />
-                  </Button>
-                </div>
-
-                <p className="text-sm text-slate-500 mt-4">
-                  Swipe left to pass • Swipe right to show interest
-                </p>
+          ) : (
+            // Empty State
+            <div className="text-center py-12">
+              <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Search className="w-12 h-12 text-slate-400" />
               </div>
-            ) : (
-              // Empty State
-              <div className="text-center py-12">
-                <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Search className="w-12 h-12 text-slate-400" />
-                </div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-4">
-                  No more grants for now
-                </h2>
-                <p className="text-slate-600 mb-6">
-                  Check back tomorrow for new opportunities, or adjust your preferences to see more matches.
-                </p>
-                <div className="flex gap-4 justify-center">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => grantMatching.mutate()}
-                    disabled={grantMatching.isPending}
-                  >
-                    <Filter className="w-4 h-4 mr-2" />
-                    {grantMatching.isPending ? 'Finding Matches...' : 'Find New Matches'}
+              <h2 className="text-2xl font-bold text-slate-900 mb-4">
+                No more grants for now
+              </h2>
+              <p className="text-slate-600 mb-6">
+                Check back tomorrow for new opportunities, or adjust your preferences to see more matches.
+              </p>
+              <div className="flex gap-4 justify-center">
+                <Button 
+                  variant="outline" 
+                  onClick={() => grantMatching.mutate()}
+                  disabled={grantMatching.isPending}
+                >
+                  <Filter className="w-4 h-4 mr-2" />
+                  {grantMatching.isPending ? 'Finding Matches...' : 'Find New Matches'}
+                </Button>
+                <Link to="/matches">
+                  <Button className="bg-blue-800 hover:bg-blue-900">
+                    View Your Matches
                   </Button>
-                  <Link to="/matches">
-                    <Button className="bg-blue-800 hover:bg-blue-900">
-                      View Your Matches
-                    </Button>
-                  </Link>
-                </div>
+                </Link>
               </div>
-            )}
-          </div>
-        </main>
-      </div>
+            </div>
+          )}
+        </div>
+      </main>
 
       {/* Match Success Modal */}
       {showMatchModal && lastMatch && (
