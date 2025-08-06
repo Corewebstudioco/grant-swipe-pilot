@@ -2,6 +2,11 @@
 import ProfileSetup from "@/components/ProfileSetup";
 
 const Profile = () => {
+  const handleProfileComplete = () => {
+    console.log('Profile setup completed');
+    // Add any additional logic needed after profile completion
+  };
+
   return (
     <div className="space-y-8">
       <div className="space-y-2">
@@ -11,7 +16,7 @@ const Profile = () => {
         </p>
       </div>
       
-      <ProfileSetup />
+      <ProfileSetup onComplete={handleProfileComplete} />
     </div>
   );
 };

@@ -74,12 +74,45 @@ export const DocumentUpload = ({ onUploadComplete }: DocumentUploadProps) => {
     if (files && files.length > 0) {
       const file = files[0];
       
-      // Create a synthetic event to reuse the same validation logic
-      const syntheticEvent = {
-        target: { files: [file] }
-      } as React.ChangeEvent<HTMLInputElement>;
+      // Process the dropped file directly without creating synthetic event
+      // Create a FileList-like object for the file input
+      const fileList = files;
       
-      await handleFileSelect(syntheticEvent);
+      // Validate and upload the file directly
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "File size must be less than 10MB",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const allowedTypes = [
+        'application/pdf',
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain'
+      ];
+
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Invalid file type",
+          description: "Please select a PDF, image, Word document, or text file",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      try {
+        await uploadDocument(file);
+        onUploadComplete?.();
+      } catch (error) {
+        console.error('Upload failed:', error);
+      }
     }
   };
 
