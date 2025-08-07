@@ -1,8 +1,10 @@
 
 import DashboardStats from "@/components/dashboard/DashboardStats";
+import DashboardMetrics from "@/components/dashboard/DashboardMetrics";
 import DashboardQuickActions from "@/components/dashboard/DashboardQuickActions";
 import DashboardActivity from "@/components/dashboard/DashboardActivity";
 import DashboardAIRecommendations from "@/components/dashboard/DashboardAIRecommendations";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useDashboardActivity } from "@/hooks/useDashboardActivity";
 
@@ -49,25 +51,38 @@ const Dashboard = () => {
         </p>
       </div>
 
-      <DashboardStats stats={stats} isLoading={statsLoading} />
-      
-      <div className="grid lg:grid-cols-2 gap-8">
-        <DashboardQuickActions 
-          onStartSwiping={handleStartSwiping}
-          isSwipingLoading={false}
-        />
-        <DashboardActivity 
-          activities={activities}
-          isLoading={activitiesLoading}
-          onActivityUpdate={addActivity}
-        />
-      </div>
-      
-      <DashboardAIRecommendations 
-        recommendations={mockRecommendations}
-        isLoading={false}
-        onRefresh={handleRefreshRecommendations}
-      />
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="metrics">Metrics</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="overview" className="space-y-8">
+          <DashboardStats stats={stats} isLoading={statsLoading} />
+          
+          <div className="grid lg:grid-cols-2 gap-8">
+            <DashboardQuickActions 
+              onStartSwiping={handleStartSwiping}
+              isSwipingLoading={false}
+            />
+            <DashboardActivity 
+              activities={activities}
+              isLoading={activitiesLoading}
+              onActivityUpdate={addActivity}
+            />
+          </div>
+          
+          <DashboardAIRecommendations 
+            recommendations={mockRecommendations}
+            isLoading={false}
+            onRefresh={handleRefreshRecommendations}
+          />
+        </TabsContent>
+        
+        <TabsContent value="metrics">
+          <DashboardMetrics />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
