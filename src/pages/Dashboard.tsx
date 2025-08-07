@@ -4,6 +4,7 @@ import DashboardMetrics from "@/components/dashboard/DashboardMetrics";
 import DashboardQuickActions from "@/components/dashboard/DashboardQuickActions";
 import DashboardActivity from "@/components/dashboard/DashboardActivity";
 import DashboardAIRecommendations from "@/components/dashboard/DashboardAIRecommendations";
+import GrantMatches from "@/components/dashboard/GrantMatches";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useDashboardActivity } from "@/hooks/useDashboardActivity";
@@ -71,6 +72,8 @@ const Dashboard = () => {
               onActivityUpdate={addActivity}
             />
           </div>
+          
+          <GrantMatches />
           
           <DashboardAIRecommendations 
             recommendations={mockRecommendations}
