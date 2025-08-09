@@ -3,6 +3,7 @@ import DashboardStats from "@/components/dashboard/DashboardStats";
 import DashboardMetrics from "@/components/dashboard/DashboardMetrics";
 import DashboardQuickActions from "@/components/dashboard/DashboardQuickActions";
 import DashboardActivity from "@/components/dashboard/DashboardActivity";
+import DashboardActivityFeed from "@/components/dashboard/DashboardActivityFeed";
 import DashboardAIRecommendations from "@/components/dashboard/DashboardAIRecommendations";
 import GrantMatches from "@/components/dashboard/GrantMatches";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -53,9 +54,10 @@ const Dashboard = () => {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="metrics">Metrics</TabsTrigger>
+          <TabsTrigger value="activity">Activity Feed</TabsTrigger>
         </TabsList>
         
         <TabsContent value="overview" className="space-y-8">
@@ -84,6 +86,10 @@ const Dashboard = () => {
         
         <TabsContent value="metrics">
           <DashboardMetrics />
+        </TabsContent>
+
+        <TabsContent value="activity">
+          <DashboardActivityFeed />
         </TabsContent>
       </Tabs>
     </div>
