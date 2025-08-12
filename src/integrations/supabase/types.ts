@@ -41,6 +41,101 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_experiments: {
+        Row: {
+          created_at: string | null
+          end_date: string | null
+          experiment_name: string
+          hypothesis: string | null
+          id: string
+          model_a_version: string
+          model_b_version: string
+          results: Json | null
+          start_date: string | null
+          status: string | null
+          success_metrics: Json | null
+          traffic_split: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          end_date?: string | null
+          experiment_name: string
+          hypothesis?: string | null
+          id?: string
+          model_a_version: string
+          model_b_version: string
+          results?: Json | null
+          start_date?: string | null
+          status?: string | null
+          success_metrics?: Json | null
+          traffic_split?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          end_date?: string | null
+          experiment_name?: string
+          hypothesis?: string | null
+          id?: string
+          model_a_version?: string
+          model_b_version?: string
+          results?: Json | null
+          start_date?: string | null
+          status?: string | null
+          success_metrics?: Json | null
+          traffic_split?: number | null
+        }
+        Relationships: []
+      }
+      ai_recommendation_feedback: {
+        Row: {
+          ai_score: number
+          created_at: string | null
+          feedback_text: string | null
+          feedback_type: string
+          grant_id: string | null
+          id: string
+          model_version: string | null
+          outcome_data: Json | null
+          recommendation_id: string | null
+          user_id: string
+          user_rating: number | null
+        }
+        Insert: {
+          ai_score: number
+          created_at?: string | null
+          feedback_text?: string | null
+          feedback_type: string
+          grant_id?: string | null
+          id?: string
+          model_version?: string | null
+          outcome_data?: Json | null
+          recommendation_id?: string | null
+          user_id: string
+          user_rating?: number | null
+        }
+        Update: {
+          ai_score?: number
+          created_at?: string | null
+          feedback_text?: string | null
+          feedback_type?: string
+          grant_id?: string | null
+          id?: string
+          model_version?: string | null
+          outcome_data?: Json | null
+          recommendation_id?: string | null
+          user_id?: string
+          user_rating?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_recommendation_feedback_grant_id_fkey"
+            columns: ["grant_id"]
+            isOneToOne: false
+            referencedRelation: "grant_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       applications: {
         Row: {
           ai_assistance_used: boolean | null
@@ -104,6 +199,110 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_profiles_enhanced: {
+        Row: {
+          ai_profile_score: number | null
+          annual_revenue: number | null
+          business_stage: string | null
+          certifications: string[] | null
+          competitive_advantages: string[] | null
+          created_at: string | null
+          employee_count: number | null
+          focus_areas: string[] | null
+          id: string
+          last_ai_analysis: string | null
+          naics_codes: string[] | null
+          past_funding_history: Json | null
+          target_markets: string[] | null
+          technology_stack: string[] | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_profile_score?: number | null
+          annual_revenue?: number | null
+          business_stage?: string | null
+          certifications?: string[] | null
+          competitive_advantages?: string[] | null
+          created_at?: string | null
+          employee_count?: number | null
+          focus_areas?: string[] | null
+          id?: string
+          last_ai_analysis?: string | null
+          naics_codes?: string[] | null
+          past_funding_history?: Json | null
+          target_markets?: string[] | null
+          technology_stack?: string[] | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_profile_score?: number | null
+          annual_revenue?: number | null
+          business_stage?: string | null
+          certifications?: string[] | null
+          competitive_advantages?: string[] | null
+          created_at?: string | null
+          employee_count?: number | null
+          focus_areas?: string[] | null
+          id?: string
+          last_ai_analysis?: string | null
+          naics_codes?: string[] | null
+          past_funding_history?: Json | null
+          target_markets?: string[] | null
+          technology_stack?: string[] | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      compliance_requirements: {
+        Row: {
+          confidence_score: number | null
+          created_at: string | null
+          description: string
+          documentation_needed: string[] | null
+          extracted_by_ai: boolean | null
+          grant_id: string | null
+          id: string
+          is_mandatory: boolean | null
+          requirement_type: string
+          validation_criteria: Json | null
+        }
+        Insert: {
+          confidence_score?: number | null
+          created_at?: string | null
+          description: string
+          documentation_needed?: string[] | null
+          extracted_by_ai?: boolean | null
+          grant_id?: string | null
+          id?: string
+          is_mandatory?: boolean | null
+          requirement_type: string
+          validation_criteria?: Json | null
+        }
+        Update: {
+          confidence_score?: number | null
+          created_at?: string | null
+          description?: string
+          documentation_needed?: string[] | null
+          extracted_by_ai?: boolean | null
+          grant_id?: string | null
+          id?: string
+          is_mandatory?: boolean | null
+          requirement_type?: string
+          validation_criteria?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_requirements_grant_id_fkey"
+            columns: ["grant_id"]
+            isOneToOne: false
+            referencedRelation: "grant_opportunities"
             referencedColumns: ["id"]
           },
         ]
@@ -182,6 +381,97 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      experiment_user_assignments: {
+        Row: {
+          assigned_variant: string
+          assignment_date: string | null
+          experiment_id: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_variant: string
+          assignment_date?: string | null
+          experiment_id?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          assigned_variant?: string
+          assignment_date?: string | null
+          experiment_id?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "experiment_user_assignments_experiment_id_fkey"
+            columns: ["experiment_id"]
+            isOneToOne: false
+            referencedRelation: "ai_experiments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grant_application_outcomes: {
+        Row: {
+          actual_outcome: boolean | null
+          application_score: number | null
+          application_status: string
+          created_at: string | null
+          decision_date: string | null
+          failure_reasons: Json | null
+          feedback_notes: string | null
+          funding_amount: number | null
+          grant_id: string | null
+          id: string
+          submitted_date: string | null
+          success_factors: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          actual_outcome?: boolean | null
+          application_score?: number | null
+          application_status: string
+          created_at?: string | null
+          decision_date?: string | null
+          failure_reasons?: Json | null
+          feedback_notes?: string | null
+          funding_amount?: number | null
+          grant_id?: string | null
+          id?: string
+          submitted_date?: string | null
+          success_factors?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          actual_outcome?: boolean | null
+          application_score?: number | null
+          application_status?: string
+          created_at?: string | null
+          decision_date?: string | null
+          failure_reasons?: Json | null
+          feedback_notes?: string | null
+          funding_amount?: number | null
+          grant_id?: string | null
+          id?: string
+          submitted_date?: string | null
+          success_factors?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grant_application_outcomes_grant_id_fkey"
+            columns: ["grant_id"]
+            isOneToOne: false
+            referencedRelation: "grant_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       grant_categories: {
         Row: {
@@ -329,6 +619,47 @@ export type Database = {
         }
         Relationships: []
       }
+      grant_training_corpus: {
+        Row: {
+          annotations: Json | null
+          content_type: string
+          created_at: string | null
+          grant_id: string | null
+          id: string
+          quality_score: number | null
+          text_content: string
+          updated_at: string | null
+        }
+        Insert: {
+          annotations?: Json | null
+          content_type: string
+          created_at?: string | null
+          grant_id?: string | null
+          id?: string
+          quality_score?: number | null
+          text_content: string
+          updated_at?: string | null
+        }
+        Update: {
+          annotations?: Json | null
+          content_type?: string
+          created_at?: string | null
+          grant_id?: string | null
+          id?: string
+          quality_score?: number | null
+          text_content?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grant_training_corpus_grant_id_fkey"
+            columns: ["grant_id"]
+            isOneToOne: false
+            referencedRelation: "grant_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grants: {
         Row: {
           agency: string | null
@@ -469,6 +800,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      model_performance_metrics: {
+        Row: {
+          created_at: string | null
+          dataset_size: number | null
+          evaluation_context: Json | null
+          evaluation_date: string | null
+          id: string
+          metric_name: string
+          metric_value: number
+          model_name: string
+          model_version: string
+        }
+        Insert: {
+          created_at?: string | null
+          dataset_size?: number | null
+          evaluation_context?: Json | null
+          evaluation_date?: string | null
+          id?: string
+          metric_name: string
+          metric_value: number
+          model_name: string
+          model_version: string
+        }
+        Update: {
+          created_at?: string | null
+          dataset_size?: number | null
+          evaluation_context?: Json | null
+          evaluation_date?: string | null
+          id?: string
+          metric_name?: string
+          metric_value?: number
+          model_name?: string
+          model_version?: string
+        }
+        Relationships: []
       }
       pipeline_logs: {
         Row: {
@@ -637,6 +1004,50 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_grant_interactions: {
+        Row: {
+          ai_recommendation_score: number | null
+          created_at: string | null
+          grant_id: string | null
+          id: string
+          interaction_context: Json | null
+          interaction_type: string
+          session_id: string | null
+          user_id: string
+          user_rating: number | null
+        }
+        Insert: {
+          ai_recommendation_score?: number | null
+          created_at?: string | null
+          grant_id?: string | null
+          id?: string
+          interaction_context?: Json | null
+          interaction_type: string
+          session_id?: string | null
+          user_id: string
+          user_rating?: number | null
+        }
+        Update: {
+          ai_recommendation_score?: number | null
+          created_at?: string | null
+          grant_id?: string | null
+          id?: string
+          interaction_context?: Json | null
+          interaction_type?: string
+          session_id?: string | null
+          user_id?: string
+          user_rating?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_grant_interactions_grant_id_fkey"
+            columns: ["grant_id"]
+            isOneToOne: false
+            referencedRelation: "grant_opportunities"
             referencedColumns: ["id"]
           },
         ]
