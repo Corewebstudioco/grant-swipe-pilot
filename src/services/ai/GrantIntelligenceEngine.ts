@@ -44,7 +44,7 @@ export class GrantIntelligenceEngine {
 
     const strengths = this.identifyStrengths(breakdown, businessProfile, grantDetails);
     const concerns = this.identifyConcerns(breakdown, businessProfile, grantDetails);
-    const recommendations = this.generateRecommendations(breakdown, businessProfile, grantDetails);
+    const recommendations = this.generateRecommendationsList(breakdown, businessProfile, grantDetails);
 
     return {
       overall: Math.round(overall),
@@ -278,7 +278,7 @@ export class GrantIntelligenceEngine {
     return concerns;
   }
 
-  private generateRecommendations(breakdown: any, businessProfile: BusinessProfile, grantDetails: any): string[] {
+  private generateRecommendationsList(breakdown: any, businessProfile: BusinessProfile, grantDetails: any): string[] {
     const recommendations: string[] = [];
 
     if (breakdown.industry_match < 70) {
