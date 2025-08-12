@@ -108,6 +108,45 @@ export type Database = {
           },
         ]
       }
+      data_sources: {
+        Row: {
+          api_key_required: boolean | null
+          api_url: string | null
+          configuration: Json | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          last_sync: string | null
+          name: string
+          rate_limit_per_hour: number | null
+          update_frequency: number | null
+        }
+        Insert: {
+          api_key_required?: boolean | null
+          api_url?: string | null
+          configuration?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_sync?: string | null
+          name: string
+          rate_limit_per_hour?: number | null
+          update_frequency?: number | null
+        }
+        Update: {
+          api_key_required?: boolean | null
+          api_url?: string | null
+          configuration?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_sync?: string | null
+          name?: string
+          rate_limit_per_hour?: number | null
+          update_frequency?: number | null
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           created_at: string
@@ -141,6 +180,152 @@ export type Database = {
           storage_path?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      grant_categories: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          keywords: string[] | null
+          level: number | null
+          name: string
+          parent_category_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          keywords?: string[] | null
+          level?: number | null
+          name: string
+          parent_category_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          keywords?: string[] | null
+          level?: number | null
+          name?: string
+          parent_category_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grant_categories_parent_category_id_fkey"
+            columns: ["parent_category_id"]
+            isOneToOne: false
+            referencedRelation: "grant_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grant_opportunities: {
+        Row: {
+          agency: string | null
+          applicant_types: string[] | null
+          application_due_date: string | null
+          application_requirements: string | null
+          application_url: string | null
+          archive_date: string | null
+          award_ceiling: number | null
+          award_floor: number | null
+          categories: string[] | null
+          cfda_number: string | null
+          created_at: string | null
+          data_quality_score: number | null
+          description: string | null
+          eligibility_requirements: string | null
+          estimated_funding: number | null
+          external_id: string
+          full_announcement_url: string | null
+          geographic_scope: string[] | null
+          id: string
+          industries: string[] | null
+          is_active: boolean | null
+          keywords: string[] | null
+          last_updated: string | null
+          number_of_awards: number | null
+          opportunity_number: string | null
+          posted_date: string | null
+          processing_status: string | null
+          program_name: string | null
+          related_documents: Json | null
+          source: string
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          agency?: string | null
+          applicant_types?: string[] | null
+          application_due_date?: string | null
+          application_requirements?: string | null
+          application_url?: string | null
+          archive_date?: string | null
+          award_ceiling?: number | null
+          award_floor?: number | null
+          categories?: string[] | null
+          cfda_number?: string | null
+          created_at?: string | null
+          data_quality_score?: number | null
+          description?: string | null
+          eligibility_requirements?: string | null
+          estimated_funding?: number | null
+          external_id: string
+          full_announcement_url?: string | null
+          geographic_scope?: string[] | null
+          id?: string
+          industries?: string[] | null
+          is_active?: boolean | null
+          keywords?: string[] | null
+          last_updated?: string | null
+          number_of_awards?: number | null
+          opportunity_number?: string | null
+          posted_date?: string | null
+          processing_status?: string | null
+          program_name?: string | null
+          related_documents?: Json | null
+          source: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          agency?: string | null
+          applicant_types?: string[] | null
+          application_due_date?: string | null
+          application_requirements?: string | null
+          application_url?: string | null
+          archive_date?: string | null
+          award_ceiling?: number | null
+          award_floor?: number | null
+          categories?: string[] | null
+          cfda_number?: string | null
+          created_at?: string | null
+          data_quality_score?: number | null
+          description?: string | null
+          eligibility_requirements?: string | null
+          estimated_funding?: number | null
+          external_id?: string
+          full_announcement_url?: string | null
+          geographic_scope?: string[] | null
+          id?: string
+          industries?: string[] | null
+          is_active?: boolean | null
+          keywords?: string[] | null
+          last_updated?: string | null
+          number_of_awards?: number | null
+          opportunity_number?: string | null
+          posted_date?: string | null
+          processing_status?: string | null
+          program_name?: string | null
+          related_documents?: Json | null
+          source?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -201,6 +386,33 @@ export type Database = {
         }
         Relationships: []
       }
+      industries: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          keywords: string[] | null
+          naics_code: string | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          keywords?: string[] | null
+          naics_code?: string | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          keywords?: string[] | null
+          naics_code?: string | null
+          name?: string
+        }
+        Relationships: []
+      }
       matches: {
         Row: {
           ai_reasons: string[] | null
@@ -257,6 +469,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pipeline_logs: {
+        Row: {
+          created_at: string | null
+          error_details: Json | null
+          errors_count: number | null
+          execution_time_ms: number | null
+          id: string
+          operation: string
+          records_processed: number | null
+          source: string
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          error_details?: Json | null
+          errors_count?: number | null
+          execution_time_ms?: number | null
+          id?: string
+          operation: string
+          records_processed?: number | null
+          source: string
+          status: string
+        }
+        Update: {
+          created_at?: string | null
+          error_details?: Json | null
+          errors_count?: number | null
+          execution_time_ms?: number | null
+          id?: string
+          operation?: string
+          records_processed?: number | null
+          source?: string
+          status?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
