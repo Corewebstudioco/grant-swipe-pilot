@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { GrantsGovConnector } from './GrantsGovConnector';
 import { USASpendingConnector } from './USASpendingConnector';
@@ -24,6 +23,9 @@ export class DataIngestionService {
       if (error) throw error;
 
       sources?.forEach(source => {
+        // Safely handle configuration object
+        const configuration = this.parseConfiguration(source.configuration);
+        
         const dataSource: GrantDataSource = {
           id: source.id,
           name: source.name,
@@ -33,9 +35,9 @@ export class DataIngestionService {
             requestsPerHour: source.rate_limit_per_hour || 1000,
             requestsPerMinute: Math.floor((source.rate_limit_per_hour || 1000) / 60),
           },
-          dataFormat: source.configuration?.format || 'json',
+          dataFormat: configuration?.format || 'json',
           updateFrequency: source.update_frequency,
-          configuration: source.configuration || {},
+          configuration: configuration || {},
         };
 
         // Initialize connectors based on source name
@@ -50,6 +52,25 @@ export class DataIngestionService {
     } catch (error) {
       console.error('Failed to initialize connectors:', error);
     }
+  }
+
+  private parseConfiguration(config: any): Record<string, any> {
+    if (!config) return {};
+    
+    // Handle different types of Json values
+    if (typeof config === 'string') {
+      try {
+        return JSON.parse(config);
+      } catch {
+        return {};
+      }
+    }
+    
+    if (typeof config === 'object' && config !== null && !Array.isArray(config)) {
+      return config as Record<string, any>;
+    }
+    
+    return {};
   }
 
   async syncAllSources(): Promise<Record<string, DataIngestionResult>> {
