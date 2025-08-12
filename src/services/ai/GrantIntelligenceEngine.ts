@@ -349,7 +349,7 @@ export class GrantIntelligenceEngine {
     };
   }
 
-  async generateRecommendations(
+  public async generateRecommendations(
     businessProfile: BusinessProfile,
     availableGrants: any[]
   ): Promise<AIRecommendation[]> {
