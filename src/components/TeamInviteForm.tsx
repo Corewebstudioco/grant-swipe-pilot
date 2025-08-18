@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useUser } from "@/contexts/UserContext";
+import { useActivityLogger } from "@/hooks/useActivityLogger";
 
 export const TeamInviteForm = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -17,6 +18,7 @@ export const TeamInviteForm = () => {
   });
   const { toast } = useToast();
   const { user } = useUser();
+  const { logTeamInvite } = useActivityLogger();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,6 +91,9 @@ export const TeamInviteForm = () => {
           variant: "default"
         });
       } else {
+        // Log the team invitation
+        logTeamInvite(formData.email, formData.role);
+        
         toast({
           title: "Invitation Sent",
           description: `Invitation sent successfully to ${formData.email}`,

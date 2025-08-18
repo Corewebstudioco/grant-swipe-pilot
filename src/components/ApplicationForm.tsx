@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/contexts/UserContext';
+import { useActivityLogger } from '@/hooks/useActivityLogger';
 import { FileText, Upload, X } from 'lucide-react';
 
 const applicationFormSchema = z.object({
@@ -28,6 +29,7 @@ interface ApplicationFormProps {
 export const ApplicationForm: React.FC<ApplicationFormProps> = ({ onSuccess, onCancel }) => {
   const { toast } = useToast();
   const { user } = useUser();
+  const { logApplicationSubmit } = useActivityLogger();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
@@ -87,6 +89,9 @@ export const ApplicationForm: React.FC<ApplicationFormProps> = ({ onSuccess, onC
       if (error) {
         throw error;
       }
+
+      // Log the application submission
+      logApplicationSubmit(data.grantName);
 
       toast({
         title: "Application Submitted",

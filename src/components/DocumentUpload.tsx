@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useDocuments } from '@/hooks/useDocuments';
 import { useToast } from '@/hooks/use-toast';
+import { useActivityLogger } from '@/hooks/useActivityLogger';
 
 interface DocumentUploadProps {
   onUploadComplete?: () => void;
@@ -14,6 +15,7 @@ export const DocumentUpload = ({ onUploadComplete }: DocumentUploadProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { uploading, uploadDocument } = useDocuments();
   const { toast } = useToast();
+  const { logDocumentUpload } = useActivityLogger();
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -53,6 +55,8 @@ export const DocumentUpload = ({ onUploadComplete }: DocumentUploadProps) => {
 
     try {
       await uploadDocument(file);
+      // Log the document upload
+      logDocumentUpload(file.name, file.type);
       onUploadComplete?.();
     } catch (error) {
       console.error('Upload failed:', error);
@@ -109,6 +113,8 @@ export const DocumentUpload = ({ onUploadComplete }: DocumentUploadProps) => {
 
       try {
         await uploadDocument(file);
+        // Log the document upload
+        logDocumentUpload(file.name, file.type);
         onUploadComplete?.();
       } catch (error) {
         console.error('Upload failed:', error);
