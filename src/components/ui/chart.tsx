@@ -74,27 +74,37 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null
   }
 
-  return (
-    <style
-      dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
-${colorConfig
-  .map(([key, itemConfig]) => {
-    const color =
-      itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
-      itemConfig.color
-    return color ? `  --color-${key}: ${color};` : null
+  // Create CSS custom properties for each theme safely using React style object
+  const lightThemeStyles: React.CSSProperties = {}
+  const darkThemeStyles: React.CSSProperties = {}
+
+  colorConfig.forEach(([key, itemConfig]) => {
+    if (itemConfig.theme) {
+      if (itemConfig.theme.light) {
+        lightThemeStyles[`--color-${key}` as any] = itemConfig.theme.light
+      }
+      if (itemConfig.theme.dark) {
+        darkThemeStyles[`--color-${key}` as any] = itemConfig.theme.dark
+      }
+    } else if (itemConfig.color) {
+      lightThemeStyles[`--color-${key}` as any] = itemConfig.color
+      darkThemeStyles[`--color-${key}` as any] = itemConfig.color
+    }
   })
-  .join("\n")}
-}
-`
-          )
-          .join("\n"),
-      }}
-    />
+
+  return (
+    <>
+      <style>
+        {`[data-chart="${id}"] { ${Object.entries(lightThemeStyles)
+          .map(([key, value]) => `${key}: ${value};`)
+          .join(' ')} }`}
+      </style>
+      <style>
+        {`.dark [data-chart="${id}"] { ${Object.entries(darkThemeStyles)
+          .map(([key, value]) => `${key}: ${value};`)
+          .join(' ')} }`}
+      </style>
+    </>
   )
 }
 
