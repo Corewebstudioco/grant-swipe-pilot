@@ -9,26 +9,10 @@ export const useDataPipeline = () => {
   const pipelineStats = useQuery({
     queryKey: ['pipeline-stats'],
     queryFn: async () => {
-      // Get pipeline logs summary
-      const { data: logs, error: logsError } = await supabase
-        .from('pipeline_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10);
+      // Use secure edge function instead of direct table access
+      const { data, error } = await supabase.functions.invoke('pipeline-status');
 
-      if (logsError) throw logsError;
-
-      // Get data sources status
-      const { data: sources, error: sourcesError } = await supabase
-        .from('data_sources')
-        .select('*');
-
-      if (sourcesError) throw sourcesError;
-
-      // Get grant opportunities count
-      const { count: totalGrants } = await supabase
-        .from('grant_opportunities')
-        .select('*', { count: 'exact', head: true });
+      if (error) throw error;
 
       // Get active grants count
       const { count: activeGrants } = await supabase
@@ -37,9 +21,9 @@ export const useDataPipeline = () => {
         .eq('is_active', true);
 
       return {
-        logs: logs || [],
-        sources: sources || [],
-        totalGrants: totalGrants || 0,
+        logs: data.logs || [],
+        sources: data.sources || [],
+        totalGrants: data.totalGrants || 0,
         activeGrants: activeGrants || 0,
       };
     },
