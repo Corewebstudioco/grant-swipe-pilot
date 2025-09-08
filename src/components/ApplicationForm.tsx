@@ -16,7 +16,7 @@ import { FileText, Upload, X } from 'lucide-react';
 const applicationFormSchema = z.object({
   grantName: z.string().min(1, 'Grant name is required'),
   reason: z.string().min(10, 'Please provide at least 10 characters explaining your reason'),
-  requestedAmount: z.number().min(1, 'Requested amount must be greater than 0'),
+  requestedAmount: z.number().min(1, 'Requested amount must be at least $1'),
 });
 
 type ApplicationFormData = z.infer<typeof applicationFormSchema>;
@@ -38,7 +38,7 @@ export const ApplicationForm: React.FC<ApplicationFormProps> = ({ onSuccess, onC
     defaultValues: {
       grantName: '',
       reason: '',
-      requestedAmount: 0,
+      requestedAmount: undefined,
     },
   });
 
@@ -176,11 +176,15 @@ export const ApplicationForm: React.FC<ApplicationFormProps> = ({ onSuccess, onC
                   <FormControl>
                     <Input 
                       type="number"
-                      placeholder="0"
+                      placeholder="Enter amount (minimum $1)"
                       min="1"
                       step="1"
                       {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        field.onChange(value === '' ? undefined : Number(value));
+                      }}
+                      value={field.value || ''}
                     />
                   </FormControl>
                   <FormMessage />

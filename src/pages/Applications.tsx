@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,84 +8,104 @@ import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Calendar, FileText, Clock, CheckCircle, XCircle, AlertCircle, Edit3, Plus } from 'lucide-react';
 import { ApplicationForm } from '@/components/ApplicationForm';
+import { supabase } from '@/integrations/supabase/client';
+import { useUser } from '@/contexts/UserContext';
+import { useToast } from '@/hooks/use-toast';
 
 const Applications = () => {
   const [selectedTab, setSelectedTab] = useState('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [applications, setApplications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useUser();
+  const { toast } = useToast();
 
-  // Sample applications data
-  const applications = [
-    {
-      id: 'app-001',
-      grantTitle: 'Small Business Innovation Research',
-      organization: 'Department of Defense',
-      amount: '$500,000',
-      status: 'submitted',
-      progress: 100,
-      deadline: '2025-03-15',
-      lastUpdated: '2025-01-15',
-      nextAction: 'Awaiting review',
-      strength: 92,
-      documentsComplete: 8,
-      documentsTotal: 8
-    },
-    {
-      id: 'app-002',
-      grantTitle: 'Tech Development Fund',
-      organization: 'State Economic Development',
-      amount: '$250,000',
-      status: 'draft',
-      progress: 65,
-      deadline: '2025-04-30',
-      lastUpdated: '2025-01-20',
-      nextAction: 'Complete financial projections',
-      strength: 78,
-      documentsComplete: 5,
-      documentsTotal: 7
-    },
-    {
-      id: 'app-003',
-      grantTitle: 'Green Energy Innovation Grant',
-      organization: 'Environmental Protection Agency',
-      amount: '$750,000',
-      status: 'under-review',
-      progress: 100,
-      deadline: '2025-02-28',
-      lastUpdated: '2025-01-10',
-      nextAction: 'Under review - no action needed',
-      strength: 88,
-      documentsComplete: 12,
-      documentsTotal: 12
-    },
-    {
-      id: 'app-004',
-      grantTitle: 'Export Development Program',
-      organization: 'Department of Commerce',
-      amount: '$100,000',
-      status: 'approved',
-      progress: 100,
-      deadline: '2025-05-15',
-      lastUpdated: '2025-01-18',
-      nextAction: 'Sign agreement documents',
-      strength: 95,
-      documentsComplete: 6,
-      documentsTotal: 6
-    },
-    {
-      id: 'app-005',
-      grantTitle: 'Workforce Training Initiative',
-      organization: 'Department of Labor',
-      amount: '$300,000',
-      status: 'rejected',
-      progress: 100,
-      deadline: '2025-06-01',
-      lastUpdated: '2025-01-12',
-      nextAction: 'Review feedback and reapply',
-      strength: 72,
-      documentsComplete: 9,
-      documentsTotal: 9
+  const fetchApplications = async () => {
+    if (!user?.id) {
+      setLoading(false);
+      return;
     }
-  ];
+
+    try {
+      const { data, error } = await supabase
+        .from('applications')
+        .select(`
+          id,
+          status,
+          application_data,
+          notes,
+          created_at,
+          updated_at,
+          grants:grant_id (
+            title,
+            agency,
+            amount
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Transform data to match expected format
+      const transformedApplications = data?.map(app => {
+        const appData = app.application_data as any;
+        return {
+          id: app.id,
+          grantTitle: appData?.grant_name || app.grants?.title || 'Untitled Grant',
+          organization: app.grants?.agency || 'Unknown Organization',
+          amount: appData?.requested_amount 
+            ? `$${appData.requested_amount.toLocaleString()}` 
+            : app.grants?.amount || '$0',
+          status: app.status === 'pending' ? 'submitted' : app.status,
+          progress: app.status === 'draft' ? 50 : 100,
+          deadline: '2025-12-31', // Default deadline
+          lastUpdated: app.updated_at,
+          nextAction: getNextAction(app.status),
+          strength: Math.floor(Math.random() * 30) + 70, // Mock strength score
+          documentsComplete: appData?.support_documents?.length || 0,
+          documentsTotal: appData?.support_documents?.length || 0
+        };
+      }) || [];
+
+      setApplications(transformedApplications);
+    } catch (error) {
+      console.error('Error fetching applications:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load applications. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getNextAction = (status: string) => {
+    switch (status) {
+      case 'draft':
+        return 'Complete and submit application';
+      case 'pending':
+      case 'submitted':
+        return 'Awaiting review';
+      case 'in_review':
+        return 'Under review - no action needed';
+      case 'approved':
+        return 'Review approval details';
+      case 'rejected':
+        return 'Review feedback and consider reapplying';
+      default:
+        return 'No action required';
+    }
+  };
+
+  useEffect(() => {
+    fetchApplications();
+  }, [user?.id]);
+
+  const refreshApplications = () => {
+    fetchApplications();
+  };
 
   const getStatusInfo = (status: string) => {
     switch (status) {
@@ -161,7 +181,10 @@ const Applications = () => {
                     <DialogTitle>Submit Grant Application</DialogTitle>
                   </DialogHeader>
                   <ApplicationForm 
-                    onSuccess={() => setIsFormOpen(false)}
+                    onSuccess={() => {
+                      setIsFormOpen(false);
+                      refreshApplications();
+                    }}
                     onCancel={() => setIsFormOpen(false)}
                   />
                 </DialogContent>
@@ -275,20 +298,28 @@ const Applications = () => {
           </TabsContent>
         </Tabs>
 
-        {filteredApplications.length === 0 && (
+        {loading ? (
+          <div className="text-center py-16">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading applications...</p>
+          </div>
+        ) : filteredApplications.length === 0 ? (
           <div className="text-center py-16">
             <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-medium text-gray-900 mb-2">
-              No applications in this category
+              {selectedTab === 'all' ? 'No applications found' : `No applications in this category`}
             </h3>
             <p className="text-gray-500 mb-6">
-              Start discovering grants to begin your application journey
+              {selectedTab === 'all' 
+                ? 'Submit your first grant application to get started'
+                : 'Start discovering grants to begin your application journey'
+              }
             </p>
             <Button asChild>
               <a href="/discover">Discover Grants</a>
             </Button>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
